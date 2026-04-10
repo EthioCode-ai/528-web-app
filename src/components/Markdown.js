@@ -3,7 +3,14 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+function preprocess(text) {
+  if (typeof text !== "string") return text;
+  // Break "Memory Trick:" onto its own paragraph and bold the prefix
+  return text.replace(/\s*(💡\s*)?Memory Trick:\s*/gi, "\n\n💡 **Memory Trick:** ");
+}
+
 export default function Markdown({ children, className = "" }) {
+  const content = preprocess(children);
   return (
     <div className={`prose-mcat ${className}`}>
       <ReactMarkdown
@@ -30,7 +37,7 @@ export default function Markdown({ children, className = "" }) {
           ),
         }}
       >
-        {children}
+        {content}
       </ReactMarkdown>
     </div>
   );
