@@ -28,7 +28,7 @@ function daysUntil(dateStr) {
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
-  const firstName = user?.first_name || "Student";
+  const firstName = user?.first_name || "there";
   const tier = user?.subscription_tier || "free";
 
   const stats = [
@@ -63,7 +63,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-          Welcome back, {firstName}!
+          {`Welcome back${user?.first_name ? `, ${user.first_name}` : ""}!`}
         </h1>
         <p className="text-sm text-slate-500 mt-1">
           Here&apos;s your study overview
