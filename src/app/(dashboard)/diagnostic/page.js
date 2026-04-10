@@ -6,6 +6,8 @@ import useDiagnosticStore from "@/stores/diagnosticStore";
 import useTutorStore from "@/stores/tutorStore";
 import useAuthStore from "@/stores/authStore";
 import DataTable from "@/components/DataTable";
+import QuestionChart from "@/components/QuestionChart";
+import QuestionDiagram from "@/components/QuestionDiagram";
 
 const SECTION_COLORS = {
   "Chem/Phys": { bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200" },
@@ -261,6 +263,12 @@ export default function DiagnosticPage() {
         {question.visuals && question.visuals.length > 0 && question.visuals.map((visual, idx) => {
           if (visual.type === "table") {
             return <DataTable key={idx} title={visual.title} headers={visual.headers} rows={visual.rows} />;
+          }
+          if (visual.type === "chart") {
+            return <QuestionChart key={idx} chartType={visual.chartType} title={visual.title} xLabel={visual.xLabel} yLabel={visual.yLabel} datasets={visual.datasets} />;
+          }
+          if (visual.type === "diagram") {
+            return <QuestionDiagram key={idx} url={visual.url} title={visual.title} />;
           }
           return null;
         })}
