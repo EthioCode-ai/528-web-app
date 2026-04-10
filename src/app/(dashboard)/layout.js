@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import useAuthStore from "@/stores/authStore";
+import useThemeStore from "@/stores/themeStore";
 
 const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" },
@@ -32,6 +33,7 @@ export default function DashboardLayout({ children }) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
+  const initTheme = useThemeStore((s) => s.initialize);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export default function DashboardLayout({ children }) {
       router.push("/login");
     } else {
       initialize();
+      initTheme();
     }
   }, []);
 
@@ -68,7 +71,7 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 h-screen ${sidebarWidth} bg-white border-r border-slate-200 flex flex-col transition-all duration-200 z-30`}>
+      <aside className={`fixed top-0 left-0 h-screen ${sidebarWidth} bg-[var(--bg-card)] border-r border-[var(--border-color)] flex flex-col transition-all duration-200 z-30`}>
         {/* Logo + Collapse toggle */}
         <div className={`flex items-center ${collapsed ? "justify-center px-2" : "justify-between px-5"} pt-5 pb-4 border-b border-slate-100`}>
           {!collapsed && (
@@ -157,7 +160,7 @@ export default function DashboardLayout({ children }) {
       </aside>
 
       {/* Main content */}
-      <main className={`${mainMargin} flex-1 bg-slate-50 min-h-screen transition-all duration-200`}>
+      <main className={`${mainMargin} flex-1 bg-[var(--bg-main)] min-h-screen transition-all duration-200`}>
         <div className="max-w-6xl mx-auto px-6 py-8 lg:px-10">
           {children}
         </div>

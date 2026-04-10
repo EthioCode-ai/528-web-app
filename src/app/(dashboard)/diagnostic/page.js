@@ -145,7 +145,7 @@ export default function DiagnosticPage() {
     else if (pct >= 50) { scoreColor = "text-amber-600"; scoreBg = "bg-amber-50"; }
 
     return (
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight mb-6 text-center">
           Diagnostic Complete
         </h1>
@@ -200,7 +200,7 @@ export default function DiagnosticPage() {
   const progress = totalQuestions > 0 ? (questionNumber / totalQuestions) * 100 : 0;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <button

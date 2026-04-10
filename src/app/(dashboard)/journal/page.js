@@ -87,14 +87,13 @@ export default function WrongAnswerJournalPage() {
     text && text.length > len ? text.slice(0, len) + "..." : text || "";
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center gap-3 mb-6">
         <button onClick={() => router.push("/dashboard")} className="text-xs font-semibold text-[#1a56db] border border-[#1a56db] rounded-lg px-3 py-1.5 hover:bg-[#1a56db]/5 cursor-pointer">
           ← Back
         </button>
         <h1 className="text-lg font-bold text-slate-900">📕 Wrong Answer Journal</h1>
-        <div className="w-16" />
       </div>
 
       {/* Free tier banner */}
@@ -111,24 +110,26 @@ export default function WrongAnswerJournalPage() {
 
       {/* Stats */}
       {stats && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-center min-w-[70px]">
-            <p className="text-xl font-extrabold text-[#1a56db]">{stats.total}</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Total</p>
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-5">
+          <div className="flex items-center justify-around divide-x divide-slate-100">
+            <div className="flex-1 text-center px-2">
+              <p className="text-xl font-extrabold text-[#1a56db]">{stats.total}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Total</p>
+            </div>
+            <div className="flex-1 text-center px-2">
+              <p className={`text-xl font-extrabold ${dueCount > 0 ? "text-amber-500" : "text-[#1a56db]"}`}>{dueCount}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Due for Review</p>
+            </div>
+            {stats.bySection?.map((s) => {
+              const sc = SECTION_COLORS[s.section] || { text: "text-slate-600" };
+              return (
+                <div key={s.section} className="flex-1 text-center px-2">
+                  <p className={`text-lg font-extrabold ${sc.text}`}>{s.total}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{s.section}</p>
+                </div>
+              );
+            })}
           </div>
-          <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-center min-w-[70px]">
-            <p className={`text-xl font-extrabold ${dueCount > 0 ? "text-amber-500" : "text-[#1a56db]"}`}>{dueCount}</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Due for Review</p>
-          </div>
-          {stats.bySection?.map((s) => {
-            const sc = SECTION_COLORS[s.section] || { text: "text-slate-600" };
-            return (
-              <div key={s.section} className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-center min-w-[70px]">
-                <p className={`text-lg font-extrabold ${sc.text}`}>{s.total}</p>
-                <p className="text-[10px] text-slate-400 mt-0.5">{s.section}</p>
-              </div>
-            );
-          })}
         </div>
       )}
 

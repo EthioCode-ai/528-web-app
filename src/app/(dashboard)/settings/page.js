@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
 import useDiagnosticStore from "@/stores/diagnosticStore";
+import useThemeStore from "@/stores/themeStore";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -13,6 +14,8 @@ export default function SettingsPage() {
   const setUser = useAuthStore((s) => s.setUser);
   const logout = useAuthStore((s) => s.logout);
   const diagnosticReset = useDiagnosticStore((s) => s.reset);
+  const dark = useThemeStore((s) => s.dark);
+  const toggleTheme = useThemeStore((s) => s.toggle);
 
   const [firstName, setFirstName] = useState(user?.first_name || "");
   const [lastName, setLastName] = useState(user?.last_name || "");
@@ -86,7 +89,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button onClick={() => router.push("/dashboard")} className="text-sm font-semibold text-[#1a56db] hover:underline cursor-pointer">← Back</button>
@@ -173,6 +176,29 @@ export default function SettingsPage() {
         >
           {saving ? "Saving..." : saved ? "✔ Saved" : "Save Changes"}
         </button>
+      </div>
+
+      {/* Appearance */}
+      <div className="bg-white dark:bg-[var(--bg-card)] border border-slate-200 dark:border-[var(--border-color)] rounded-2xl p-6 mb-4 shadow-sm">
+        <h2 className="text-base font-bold text-slate-900 dark:text-[var(--text-primary)] mb-4">Appearance</h2>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-800 dark:text-[var(--text-primary)]">Dark Mode</p>
+            <p className="text-xs text-slate-400 mt-0.5">Switch between light and dark themes</p>
+          </div>
+          <button
+            onClick={toggleTheme}
+            className={`relative w-12 h-7 rounded-full transition-colors cursor-pointer ${
+              dark ? "bg-[#1a56db]" : "bg-slate-300"
+            }`}
+          >
+            <div
+              className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                dark ? "translate-x-5.5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
       {/* Danger Zone */}
