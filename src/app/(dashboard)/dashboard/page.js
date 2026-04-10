@@ -50,10 +50,10 @@ export default function DashboardPage() {
     <div>
       {/* ── Header ── */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">
           {`Hello${user?.first_name ? `, ${user.first_name}` : ""}`}
         </h1>
-        <p className="text-sm text-slate-500 mt-1">Ready to study?</p>
+        <p className="text-sm text-[var(--text-secondary)] mt-1">Ready to study?</p>
       </div>
 
       {/* ── Stats Bar ── */}
