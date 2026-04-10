@@ -31,6 +31,7 @@ export default function DashboardPage() {
 
   const [gapAnalysis, setGapAnalysis] = useState(null);
   const [wrongAnswerCount, setWrongAnswerCount] = useState(0);
+  const [showFocusInfo, setShowFocusInfo] = useState(false);
 
   useEffect(() => {
     apiFetch("/diagnostic/gap-analysis").then(setGapAnalysis).catch(() => {});
@@ -209,7 +210,15 @@ export default function DashboardPage() {
 
       {/* ── Focus Areas ── */}
       {gapAnalysis && gapAnalysis.weakAreas?.length > 0 && (
-        <div className="bg-white rounded-2xl border border-red-200 p-6 shadow-sm">
+        <div className="relative bg-white rounded-2xl border border-red-200 p-6 shadow-sm">
+          <button
+            onClick={() => setShowFocusInfo(true)}
+            className="absolute top-4 right-4 w-7 h-7 rounded-full bg-[#1a56db]/10 text-[#1a56db] flex items-center justify-center text-xs font-bold hover:bg-[#1a56db]/20 cursor-pointer transition-colors"
+            title="How Focus Areas work"
+            aria-label="Focus Areas info"
+          >
+            i
+          </button>
           <h2 className="text-base font-bold text-slate-900 mb-1">⚠️ Focus Areas</h2>
           <p className="text-sm text-slate-500 mb-4">These topics need the most attention:</p>
           {gapAnalysis.weakAreas
@@ -253,6 +262,82 @@ export default function DashboardPage() {
                 </div>
               );
             })}
+        </div>
+      )}
+
+      {/* Focus Areas Info Modal */}
+      {showFocusInfo && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
+          onClick={() => setShowFocusInfo(false)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[85vh] overflow-y-auto relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowFocusInfo(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center cursor-pointer transition-colors"
+              aria-label="Close"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <h3 className="text-lg font-bold text-slate-900 mb-4 pr-8">How Focus Areas Work</h3>
+
+            <div className="space-y-4 text-sm text-slate-600 leading-relaxed">
+              <p>
+                Focus Areas surfaces the topics where your weighted accuracy is below 50%, so
+                you know exactly where to spend your study time.
+              </p>
+
+              <div>
+                <p className="font-semibold text-slate-800 mb-1">Topic Mastery (e.g., 20%)</p>
+                <p>
+                  Stored persistently as a smoothed score that blends your historical accuracy with
+                  recent results, weighted by question difficulty. A fresh wrong answer starts at
+                  20%; a fresh correct answer starts at 50%. As you keep practicing, the number
+                  moves toward your true mastery level.
+                </p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-slate-800 mb-1">Subtopic Accuracy (e.g., 0%)</p>
+                <p>
+                  Raw percentage of correct answers within that specific subtopic. 0% means you
+                  haven&apos;t answered any subtopic question correctly yet — even a single right
+                  answer will move it.
+                </p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-slate-800 mb-1">Why they differ</p>
+                <p>
+                  Topic mastery uses a smoothed formula to prevent panic from one bad answer.
+                  Subtopic accuracy is unsmoothed and shows raw performance. Both are accurate;
+                  they just measure slightly different things.
+                </p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-slate-800 mb-1">How to improve a score</p>
+                <p>
+                  Run a Section Drill or Diagnostic that touches these topics. Each correct answer
+                  raises your mastery; each wrong answer lowers it. Topics disappear from this list
+                  once they cross 50%.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowFocusInfo(false)}
+              className="w-full mt-6 bg-[#1a56db] text-white text-sm font-bold py-3 rounded-xl hover:bg-[#1648b8] cursor-pointer"
+            >
+              Got it
+            </button>
+          </div>
         </div>
       )}
     </div>
