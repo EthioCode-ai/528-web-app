@@ -75,13 +75,13 @@ export default function DashboardLayout({ children }) {
         {/* Logo + Collapse toggle */}
         <div className={`flex items-center ${collapsed ? "justify-center px-2" : "justify-between px-5"} pt-5 pb-4 border-b border-slate-100`}>
           {!collapsed && (
-            <div>
-              <h1 className="text-lg font-extrabold text-[#1a56db] tracking-tight leading-tight">528 AI</h1>
+            <div className="flex flex-col items-center w-full">
+              <img src="/logo.png" alt="528 AI" className="w-10 h-10 mb-1" />
               <p className="text-[10px] font-medium text-slate-400 tracking-wide uppercase">MCAT Study Engine</p>
             </div>
           )}
           {collapsed && (
-            <h1 className="text-lg font-extrabold text-[#1a56db]">5</h1>
+            <img src="/logo.png" alt="528 AI" className="w-8 h-8" />
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}

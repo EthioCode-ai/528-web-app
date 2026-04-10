@@ -68,9 +68,10 @@ export default function StudyPlanPage() {
       setSelectedWeek(0);
       alert("Your personalized study plan is ready!");
     } catch (err) {
-      if (err.message?.includes("test date")) {
+      const msg = err.message?.toLowerCase() || "";
+      if (msg.includes("test date") || msg.includes("test_date") || msg.includes("400")) {
         setNeedsTestDate(true);
-        alert("Set your MCAT test date in Settings first.");
+        alert("Set your MCAT test date in Settings first, then come back to generate your plan.");
       } else {
         alert("Failed to generate study plan. Try again.");
       }
