@@ -6,23 +6,21 @@ export function proxy(request) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("bc_token")?.value;
 
-  const isPublicRoute = publicRoutes.some(
-    (route) => pathname === route || pathname.startsWith(route + "/")
-  );
+  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
+  const isRootRoute = pathname === "/";
 
-  // Unauthenticated user trying to access a protected route
-  if (!token && !isPublicRoute) {
+  if (isRootRoute) {
+    if (token) return NextResponse.redirect(new URL("/dashboard", request.url));
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Authenticated user trying to access auth pages
-  if (token && isPublicRoute) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  if (!token && !isPublicRoute) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon\\.ico|.*\\.png$).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
