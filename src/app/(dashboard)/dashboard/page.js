@@ -106,6 +106,30 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* Section Drill */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm mb-10">
+        <p className="text-2xl mb-2">📚</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">Section Drill</h2>
+        <p className="text-sm text-slate-500 mb-4">Focus on a specific MCAT section:</p>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { code: "chem_phys", name: "Chem/Phys", topics: 8, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200" },
+            { code: "cars", name: "CARS", topics: 6, color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-200" },
+            { code: "bio_biochem", name: "Bio/Biochem", topics: 8, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200" },
+            { code: "psych_soc", name: "Psych/Soc", topics: 8, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200" },
+          ].map((s) => (
+            <Link
+              key={s.code}
+              href={`/diagnostic?section=${s.code}`}
+              className={`${s.bg} border ${s.border} rounded-xl p-4 hover:shadow-md transition-all`}
+            >
+              <p className={`text-sm font-bold ${s.color}`}>{s.name}</p>
+              <p className={`text-xs mt-1 ${s.color} opacity-70`}>{s.topics} topics</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       {/* Quick Actions */}
       <h2 className="text-lg font-bold text-slate-900 mb-4">Quick Actions</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

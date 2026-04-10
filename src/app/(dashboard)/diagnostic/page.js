@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import useDiagnosticStore from "@/stores/diagnosticStore";
 import useTutorStore from "@/stores/tutorStore";
 import useAuthStore from "@/stores/authStore";
@@ -22,14 +22,16 @@ const DIFFICULTY_COLORS = {
 
 export default function DiagnosticPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const sectionParam = searchParams.get("section");
   const user = useAuthStore((s) => s.user);
   const tier = user?.subscription_tier || "free";
   const isFree = tier === "free";
 
   const {
     question, questionNumber, totalQuestions, selected, submitted, isCorrect,
-    loading, sectionFilter, stats, results, startDiagnostic, selectAnswer,
-    submitAnswer, fetchNextQuestion, completeDiagnostic, reset,
+    loading, sectionFilter, stats, results, startDiagnostic, startSectionDrill,
+    selectAnswer, submitAnswer, fetchNextQuestion, completeDiagnostic, reset,
   } = useDiagnosticStore();
 
   const {
@@ -42,11 +44,15 @@ export default function DiagnosticPage() {
   const [started, setStarted] = useState(false);
   const chatEndRef = useRef(null);
 
-  // Auto-start diagnostic on mount
+  // Auto-start diagnostic or section drill on mount
   useEffect(() => {
     if (!started) {
       setStarted(true);
-      startDiagnostic(20);
+      if (sectionParam) {
+        startSectionDrill(sectionParam);
+      } else {
+        startDiagnostic(20);
+      }
     }
     return () => {
       reset();
