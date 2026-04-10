@@ -8,6 +8,7 @@ import useAuthStore from "@/stores/authStore";
 import DataTable from "@/components/DataTable";
 import QuestionChart from "@/components/QuestionChart";
 import QuestionDiagram from "@/components/QuestionDiagram";
+import Markdown from "@/components/Markdown";
 
 const SECTION_COLORS = {
   "Chem/Phys": { bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200" },
@@ -359,9 +360,9 @@ export default function DiagnosticPage() {
               <p className={`font-bold text-[15px] mb-2 ${isCorrect ? "text-emerald-700" : "text-red-700"}`}>
                 {isCorrect ? "✓ Correct!" : "✗ Incorrect"}
               </p>
-              <p className="text-sm text-slate-600 leading-relaxed">
+              <Markdown className="text-sm text-slate-600">
                 {question.explanation}
-              </p>
+              </Markdown>
             </div>
 
             {/* Socratic Tutor — gated */}
@@ -396,17 +397,21 @@ export default function DiagnosticPage() {
                 <p className="text-xs font-semibold text-amber-600 mb-3">🧑‍🏫 Socratic Tutor</p>
 
                 {/* Messages */}
-                <div className="max-h-52 overflow-y-auto mb-3 flex flex-col gap-2">
+                <div className="max-h-96 overflow-y-auto mb-3 flex flex-col gap-3 pr-1">
                   {messages.map((m, i) => (
                     <div
                       key={i}
-                      className={`max-w-[85%] px-3 py-2.5 rounded-xl text-sm leading-relaxed ${
+                      className={`max-w-[90%] px-4 py-3 rounded-xl text-sm ${
                         m.role === "user"
                           ? "self-end bg-[#1a56db]/10 text-slate-800"
                           : "self-start bg-white border border-slate-200 text-slate-700"
                       }`}
                     >
-                      {m.content}
+                      {m.role === "user" ? (
+                        m.content
+                      ) : (
+                        <Markdown>{m.content}</Markdown>
+                      )}
                     </div>
                   ))}
                   {tutorLoading && (

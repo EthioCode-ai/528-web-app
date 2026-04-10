@@ -73,19 +73,21 @@ export default function DashboardLayout({ children }) {
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 h-screen ${sidebarWidth} bg-[var(--bg-card)] border-r border-[var(--border-color)] flex flex-col transition-all duration-200 z-30`}>
         {/* Logo + Collapse toggle */}
-        <div className={`flex items-center ${collapsed ? "justify-center px-2" : "justify-between px-5"} pt-5 pb-4 border-b border-slate-100`}>
+        <div className={`relative ${collapsed ? "px-2" : "px-5"} pt-5 pb-4 border-b border-slate-100`}>
           {!collapsed && (
             <div className="flex flex-col items-center w-full">
-              <img src="/logo.png" alt="528 AI" className="w-10 h-10 mb-1" />
+              <img src="/logo.png" alt="528 AI" className="w-[120px] h-[120px] mb-2" />
               <p className="text-[10px] font-medium text-slate-400 tracking-wide uppercase">MCAT Study Engine</p>
             </div>
           )}
           {collapsed && (
-            <img src="/logo.png" alt="528 AI" className="w-8 h-8" />
+            <div className="flex justify-center">
+              <img src="/logo.png" alt="528 AI" className="w-10 h-10" />
+            </div>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer transition-colors"
+            className="absolute top-3 right-3 w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer transition-colors"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

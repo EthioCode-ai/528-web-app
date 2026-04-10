@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
+import Markdown from "@/components/Markdown";
 
 const SECTION_COLORS = {
   "Chem/Phys": { bg: "bg-blue-50", text: "text-blue-600" },
@@ -267,7 +268,9 @@ export default function WrongAnswerJournalPage() {
                       <>
                         <div className="bg-slate-50 rounded-xl p-4 mt-4 mb-5">
                           <p className="text-xs font-bold text-[#1a56db] mb-2">Explanation</p>
-                          <p className="text-sm text-slate-600 leading-relaxed">{selectedEntry.explanation || q.explanation}</p>
+                          <Markdown className="text-sm text-slate-600">
+                            {selectedEntry.explanation || q.explanation}
+                          </Markdown>
                         </div>
 
                         <p className="text-sm font-semibold text-slate-800 text-center mb-3">Do you understand this concept now?</p>

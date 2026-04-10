@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
+import Markdown from "@/components/Markdown";
 
 export default function ScanPage() {
   const router = useRouter();
@@ -207,7 +208,7 @@ export default function ScanPage() {
 
           <div className="bg-white border border-slate-200 rounded-xl p-5 mb-4 shadow-sm">
             <h3 className="text-base font-bold text-[#1a56db] mb-3">MCAT Analysis</h3>
-            <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{explanation}</p>
+            <Markdown className="text-sm text-slate-600">{explanation}</Markdown>
           </div>
 
           {/* Teaching buttons */}
@@ -244,17 +245,17 @@ export default function ScanPage() {
                 <button onClick={() => { setChatMode(null); setChatMessages([]); }} className="text-slate-400 hover:text-slate-600 text-base cursor-pointer">✕</button>
               </div>
 
-              <div className="max-h-64 overflow-y-auto mb-3 flex flex-col gap-2">
+              <div className="max-h-96 overflow-y-auto mb-3 flex flex-col gap-3 pr-1">
                 {chatMessages.map((m, i) => (
                   <div
                     key={i}
-                    className={`max-w-[85%] px-3 py-2.5 rounded-xl text-sm leading-relaxed ${
+                    className={`max-w-[90%] px-4 py-3 rounded-xl text-sm ${
                       m.role === "user"
                         ? "self-end bg-[#1a56db]/10 text-slate-800"
                         : "self-start bg-white border border-slate-200 text-slate-700"
                     }`}
                   >
-                    {m.content}
+                    {m.role === "user" ? m.content : <Markdown>{m.content}</Markdown>}
                   </div>
                 ))}
                 {chatLoading && <p className="text-xs text-slate-400 italic">Thinking...</p>}
