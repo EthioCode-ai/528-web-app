@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import useAuthStore from "@/stores/authStore";
@@ -24,8 +25,17 @@ const tierStyles = {
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push("/login");
+    }
+  }, [isAuthenticated, router]);
+
+  if (!isAuthenticated()) return null;
 
   const tier = user?.subscription_tier || "free";
   const displayName =

@@ -1,8 +1,10 @@
 import { create } from "zustand";
 
-const useAuthStore = create((set) => ({
+const useAuthStore = create((set, get) => ({
   token: typeof window !== "undefined" ? localStorage.getItem("token") : null,
   user: null,
+
+  isAuthenticated: () => !!get().token,
 
   setAuth: (token, user) => {
     localStorage.setItem("token", token);
