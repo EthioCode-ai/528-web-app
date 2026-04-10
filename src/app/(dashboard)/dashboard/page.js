@@ -210,58 +210,64 @@ export default function DashboardPage() {
 
       {/* ── Focus Areas ── */}
       {gapAnalysis && gapAnalysis.weakAreas?.length > 0 && (
-        <div className="relative bg-white rounded-2xl border border-red-200 p-6 shadow-sm">
-          <button
-            onClick={() => setShowFocusInfo(true)}
-            className="absolute top-4 right-4 w-7 h-7 rounded-full bg-[#1a56db]/10 text-[#1a56db] flex items-center justify-center text-xs font-bold hover:bg-[#1a56db]/20 cursor-pointer transition-colors"
-            title="How Focus Areas work"
-            aria-label="Focus Areas info"
-          >
-            i
-          </button>
-          <h2 className="text-base font-bold text-slate-900 mb-1">⚠️ Focus Areas</h2>
-          <p className="text-sm text-slate-500 mb-4">These topics need the most attention:</p>
-          {gapAnalysis.weakAreas
-            .filter((w, i, arr) => arr.findIndex((a) => a.section === w.section) === i)
-            .slice(0, 4)
-            .map((w, i) => {
-              const sc = SECTION_COLORS[w.section] || "text-slate-600";
-              const masteryRaw = w.mastery ?? w.weighted_accuracy ?? w.accuracy;
-              const masteryVal = masteryRaw == null ? null : Math.round(masteryRaw);
-              return (
-                <div key={i} className="mb-3">
-                  <div className="flex items-center gap-2.5 mb-1">
-                    <div className={`w-2 h-2 rounded-full ${sc.replace("text-", "bg-")}`} />
-                    <span className="text-sm text-slate-800 font-medium flex-1">
-                      {w.topic} <span className="text-slate-400">({w.section})</span>
-                    </span>
-                    <span className={`text-sm font-bold tabular-nums w-12 text-right ${
-                      masteryVal == null ? "text-slate-300" : masteryVal < 30 ? "text-red-500" : "text-amber-500"
-                    }`}>
+        <div className="relative bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <div className="flex items-start justify-between mb-1">
+            <h2 className="text-base font-bold text-slate-900">Focus Areas</h2>
+            <div className="flex items-center gap-2">
+              <span className="bg-red-50 text-red-500 text-[11px] font-semibold px-2.5 py-1 rounded-full">
+                Priority
+              </span>
+              <button
+                onClick={() => setShowFocusInfo(true)}
+                className="w-7 h-7 rounded-full bg-[#1a56db]/10 text-[#1a56db] flex items-center justify-center text-xs font-bold hover:bg-[#1a56db]/20 cursor-pointer transition-colors"
+                title="How Focus Areas work"
+                aria-label="Focus Areas info"
+              >
+                i
+              </button>
+            </div>
+          </div>
+          <p className="text-sm text-slate-500 mb-5">These topics need the most attention before your next review cycle.</p>
+
+          <div className="flex flex-col gap-4">
+            {gapAnalysis.weakAreas
+              .filter((w, i, arr) => arr.findIndex((a) => a.section === w.section) === i)
+              .slice(0, 4)
+              .map((w, i) => {
+                const masteryRaw = w.mastery ?? w.weighted_accuracy ?? w.accuracy;
+                const masteryVal = masteryRaw == null ? null : Math.round(masteryRaw);
+                const subtopicName = w.subtopics?.[0]?.name;
+                const barColor =
+                  masteryVal == null ? "bg-slate-200" : masteryVal < 30 ? "bg-red-500" : masteryVal < 50 ? "bg-amber-500" : "bg-emerald-500";
+                const textColor =
+                  masteryVal == null ? "text-slate-300" : masteryVal < 30 ? "text-red-500" : masteryVal < 50 ? "text-amber-500" : "text-emerald-500";
+
+                return (
+                  <div key={i} className="flex items-center gap-4">
+                    {/* Topic + subtopic */}
+                    <div className="w-44 flex-shrink-0">
+                      <p className="text-sm font-semibold text-slate-900 leading-tight">{w.topic}</p>
+                      {subtopicName && (
+                        <p className="text-xs text-slate-400 mt-0.5">{subtopicName}</p>
+                      )}
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${barColor} transition-all duration-500`}
+                        style={{ width: `${masteryVal ?? 0}%` }}
+                      />
+                    </div>
+
+                    {/* Percentage */}
+                    <span className={`text-sm font-bold tabular-nums w-12 text-right ${textColor}`}>
                       {masteryVal == null ? "—" : `${masteryVal}%`}
                     </span>
                   </div>
-                  {w.subtopics?.length > 0 && (
-                    <div className="ml-[18px] border-l border-slate-100 pl-3">
-                      {w.subtopics.slice(0, 3).map((st, j) => {
-                        const stRaw = st.mastery ?? st.weighted_accuracy ?? st.accuracy;
-                        const stVal = stRaw == null ? null : Math.round(stRaw);
-                        return (
-                          <div key={j} className="flex items-center py-0.5">
-                            <span className="text-xs text-slate-500 flex-1">{st.name}</span>
-                            <span className={`text-sm font-bold tabular-nums w-12 text-right ${
-                              stVal == null ? "text-slate-300" : stVal < 30 ? "text-red-500" : "text-amber-500"
-                            }`}>
-                              {stVal == null ? "—" : `${stVal}%`}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+          </div>
         </div>
       )}
 
