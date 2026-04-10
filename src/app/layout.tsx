@@ -10,6 +10,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "528 AI — MCAT Study Engine",
   description: "AI-powered MCAT prep by Neuromart",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
