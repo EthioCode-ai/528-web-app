@@ -1,7 +1,16 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import useAuthStore from "@/stores/authStore";
+import { apiFetch } from "@/lib/api";
+
+const SECTION_COLORS = {
+  "Chem/Phys": "text-blue-600",
+  "CARS": "text-purple-600",
+  "Bio/Biochem": "text-emerald-600",
+  "Psych/Soc": "text-amber-600",
+};
 
 const quickActions = [
   { href: "/diagnostic", label: "Diagnostic", desc: "Test your baseline", color: "bg-blue-500", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
@@ -30,6 +39,12 @@ export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const firstName = user?.first_name || "there";
   const tier = user?.subscription_tier || "free";
+
+  const [gapAnalysis, setGapAnalysis] = useState(null);
+
+  useEffect(() => {
+    apiFetch("/diagnostic/gap-analysis").then(setGapAnalysis).catch(() => {});
+  }, []);
 
   const stats = [
     {
@@ -165,6 +180,47 @@ export default function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* Focus Areas */}
+      {gapAnalysis && gapAnalysis.weakAreas?.length > 0 && (
+        <div className="bg-white rounded-xl border border-red-200 p-6 shadow-sm mt-10">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold text-slate-900">⚠️ Focus Areas</h2>
+          </div>
+          <p className="text-sm text-slate-500 mb-4">These topics need the most attention:</p>
+          {gapAnalysis.weakAreas
+            .filter((w, i, arr) => arr.findIndex((a) => a.section === w.section) === i)
+            .slice(0, 4)
+            .map((w, i) => {
+              const sc = SECTION_COLORS[w.section] || "text-slate-600";
+              return (
+                <div key={i} className="mb-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`w-1.5 h-1.5 rounded-full ${sc.replace("text-", "bg-")}`} />
+                    <span className="text-sm text-slate-800 font-medium flex-1">
+                      {w.topic} <span className="text-slate-400">({w.section})</span>
+                    </span>
+                    <span className={`text-sm font-bold ${Math.round(w.mastery) < 30 ? "text-red-500" : "text-amber-500"}`}>
+                      {Math.round(w.mastery)}%
+                    </span>
+                  </div>
+                  {w.subtopics?.length > 0 && (
+                    <div className="ml-5">
+                      {w.subtopics.slice(0, 3).map((st, j) => (
+                        <div key={j} className="flex items-center justify-between py-0.5">
+                          <span className="text-xs text-slate-400">{st.name}</span>
+                          <span className={`text-xs font-semibold ${st.mastery < 30 ? "text-red-500" : "text-amber-500"}`}>
+                            {st.mastery}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+        </div>
+      )}
     </div>
   );
 }
