@@ -217,27 +217,37 @@ export default function DashboardPage() {
             .slice(0, 4)
             .map((w, i) => {
               const sc = SECTION_COLORS[w.section] || "text-slate-600";
+              const masteryRaw = w.mastery ?? w.weighted_accuracy ?? w.accuracy;
+              const masteryVal = masteryRaw == null ? null : Math.round(masteryRaw);
               return (
-                <div key={i} className="mb-2.5">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className={`w-1.5 h-1.5 rounded-full ${sc.replace("text-", "bg-")}`} />
+                <div key={i} className="mb-3">
+                  <div className="flex items-center gap-2.5 mb-1">
+                    <div className={`w-2 h-2 rounded-full ${sc.replace("text-", "bg-")}`} />
                     <span className="text-sm text-slate-800 font-medium flex-1">
                       {w.topic} <span className="text-slate-400">({w.section})</span>
                     </span>
-                    <span className={`text-sm font-bold ${Math.round(w.mastery) < 30 ? "text-red-500" : "text-amber-500"}`}>
-                      {Math.round(w.mastery)}%
+                    <span className={`text-sm font-bold tabular-nums w-12 text-right ${
+                      masteryVal == null ? "text-slate-300" : masteryVal < 30 ? "text-red-500" : "text-amber-500"
+                    }`}>
+                      {masteryVal == null ? "—" : `${masteryVal}%`}
                     </span>
                   </div>
                   {w.subtopics?.length > 0 && (
-                    <div className="ml-5">
-                      {w.subtopics.slice(0, 3).map((st, j) => (
-                        <div key={j} className="flex items-center justify-between py-0.5">
-                          <span className="text-xs text-slate-400">{st.name}</span>
-                          <span className={`text-xs font-semibold ${st.mastery < 30 ? "text-red-500" : "text-amber-500"}`}>
-                            {st.mastery}%
-                          </span>
-                        </div>
-                      ))}
+                    <div className="ml-[18px] border-l border-slate-100 pl-3">
+                      {w.subtopics.slice(0, 3).map((st, j) => {
+                        const stRaw = st.mastery ?? st.weighted_accuracy ?? st.accuracy;
+                        const stVal = stRaw == null ? null : Math.round(stRaw);
+                        return (
+                          <div key={j} className="flex items-center py-0.5">
+                            <span className="text-xs text-slate-500 flex-1">{st.name}</span>
+                            <span className={`text-sm font-bold tabular-nums w-12 text-right ${
+                              stVal == null ? "text-slate-300" : stVal < 30 ? "text-red-500" : "text-amber-500"
+                            }`}>
+                              {stVal == null ? "—" : `${stVal}%`}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
