@@ -313,6 +313,30 @@ export default function DashboardPage() {
           </div>
           <p className="text-sm text-slate-500 mb-5">These topics need the most attention before your next review cycle.</p>
 
+          {/* Mastery scale legend — fading gradient from red → amber → green
+              showing where the progress bar will change colors as the user
+              improves. Aligned with the topic / bar / percentage columns below. */}
+          <div className="flex items-center gap-4 mb-5">
+            <div className="w-44 flex-shrink-0 text-right pr-1">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Mastery scale</p>
+            </div>
+            <div className="flex-1">
+              <div
+                className="h-2 rounded-full"
+                style={{
+                  background:
+                    "linear-gradient(to right, #ef4444 0%, #ef4444 22%, #f59e0b 38%, #f59e0b 44%, #10b981 56%, #10b981 100%)",
+                }}
+              />
+              <div className="flex justify-between mt-1 text-[9px] font-bold uppercase tracking-wider">
+                <span className="text-red-500">Struggling</span>
+                <span className="text-amber-500">Improving</span>
+                <span className="text-emerald-500">Solid</span>
+              </div>
+            </div>
+            <div className="w-12 flex-shrink-0" />
+          </div>
+
           <div className="flex flex-col gap-4">
             {gapAnalysis.weakAreas
               .filter((w, i, arr) => arr.findIndex((a) => a.section === w.section) === i)
