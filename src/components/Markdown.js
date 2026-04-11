@@ -17,7 +17,15 @@ export default function Markdown({ children, className = "" }) {
     <div className={`prose-mcat ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex]}
+        rehypePlugins={[
+          // throwOnError: false → KaTeX renders unparseable LaTeX as red
+          //   inline error text instead of throwing a SyntaxError that
+          //   crashes the React tree. Critical for legacy content that
+          //   contains stray $ characters (currency, etc.) from before
+          //   the LaTeX-aware prompts shipped.
+          // strict: "ignore" → don't warn on KaTeX-strict-mode violations.
+          [rehypeKatex, { throwOnError: false, strict: "ignore" }],
+        ]}
         components={{
           p: ({ children }) => <p className="mb-3 leading-relaxed last:mb-0">{children}</p>,
           ul: ({ children }) => <ul className="list-disc pl-5 mb-3 space-y-1.5">{children}</ul>,
