@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import useAuthStore from "@/stores/authStore";
 import { apiFetch } from "@/lib/api";
 import Markdown from "@/components/Markdown";
+import DataTable from "@/components/DataTable";
+import QuestionChart from "@/components/QuestionChart";
 
 // ============================================================
 // Active Study Group session page
@@ -563,7 +565,7 @@ function MessageBubble({ message, isActiveQuiz, userAnswer, onAnswer, sending })
       <div className="flex items-start gap-3">
         <PersonaAvatar meta={meta} />
         <div className={`flex-1 max-w-2xl px-4 py-3 rounded-xl border-l-4 text-sm ${styleBg}`}>
-          {message.content}
+          <Markdown>{message.content}</Markdown>
         </div>
       </div>
     );
@@ -618,7 +620,19 @@ function QuizCard({ message, meta, isActive, userAnswer, onAnswer, sending }) {
             )}
           </p>
         )}
-        <div className="text-sm text-slate-800 mb-3 whitespace-pre-wrap">{q.stem}</div>
+        <div className="text-sm text-slate-800 mb-3">
+          <Markdown>{q.stem}</Markdown>
+        </div>
+        {/* Visuals (tables, charts) — same dispatch as the diagnostic page */}
+        {q.visuals && q.visuals.length > 0 && q.visuals.map((visual, idx) => {
+          if (visual.type === "table") {
+            return <DataTable key={idx} title={visual.title} headers={visual.headers} rows={visual.rows} />;
+          }
+          if (visual.type === "chart") {
+            return <QuestionChart key={idx} chartType={visual.chartType} title={visual.title} xLabel={visual.xLabel} yLabel={visual.yLabel} datasets={visual.datasets} />;
+          }
+          return null;
+        })}
         <div className="grid grid-cols-1 gap-2">
           {["A", "B", "C", "D"].map((letter) => {
             const choice = q.choices?.[letter];

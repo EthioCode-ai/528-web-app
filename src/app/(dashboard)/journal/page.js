@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
 import Markdown from "@/components/Markdown";
+import DataTable from "@/components/DataTable";
+import QuestionChart from "@/components/QuestionChart";
+import QuestionDiagram from "@/components/QuestionDiagram";
 
 const SECTION_COLORS = {
   "Chem/Phys": { bg: "bg-blue-50", text: "text-blue-600" },
@@ -233,8 +236,24 @@ export default function WrongAnswerJournalPage() {
                       )}
                     </div>
 
-                    {/* Stem */}
-                    <p className="text-sm text-slate-800 leading-relaxed mb-5">{q.stem}</p>
+                    {/* Stem — wrapped in Markdown so KaTeX renders math formulas */}
+                    <div className="text-sm text-slate-800 leading-relaxed mb-5">
+                      <Markdown>{q.stem}</Markdown>
+                    </div>
+
+                    {/* Visuals (tables, charts, diagrams) — same dispatch as diagnostic page */}
+                    {q.visuals && q.visuals.length > 0 && q.visuals.map((visual, idx) => {
+                      if (visual.type === "table") {
+                        return <DataTable key={idx} title={visual.title} headers={visual.headers} rows={visual.rows} />;
+                      }
+                      if (visual.type === "chart") {
+                        return <QuestionChart key={idx} chartType={visual.chartType} title={visual.title} xLabel={visual.xLabel} yLabel={visual.yLabel} datasets={visual.datasets} />;
+                      }
+                      if (visual.type === "diagram") {
+                        return <QuestionDiagram key={idx} url={visual.url} title={visual.title} />;
+                      }
+                      return null;
+                    })}
 
                     {/* Choices */}
                     {q.choices && Object.entries(q.choices).map(([letter, text]) => {

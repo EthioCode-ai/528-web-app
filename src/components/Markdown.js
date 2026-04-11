@@ -2,6 +2,8 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 
 function preprocess(text) {
   if (typeof text !== "string") return text;
@@ -14,7 +16,8 @@ export default function Markdown({ children, className = "" }) {
   return (
     <div className={`prose-mcat ${className}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
         components={{
           p: ({ children }) => <p className="mb-3 leading-relaxed last:mb-0">{children}</p>,
           ul: ({ children }) => <ul className="list-disc pl-5 mb-3 space-y-1.5">{children}</ul>,
