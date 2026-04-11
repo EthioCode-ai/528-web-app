@@ -87,6 +87,9 @@ export default function SettingsPage() {
   const tier = user?.subscription_tier || "free";
   const isElite = tier === "elite" || tier === "vip";
   const currentPlan = user?.subscription_plan || null;
+  // True only when the user actually has a Stripe customer record. Elite users
+  // upgraded outside Stripe (legacy RevenueCat, comp accounts, manual SQL) won't.
+  const hasStripeCustomer = !!user?.stripe_customer_id;
 
   const [prices, setPrices] = useState(null);
   const [pricesLoading, setPricesLoading] = useState(false);
@@ -374,7 +377,9 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* ELITE / VIP — manage card only, no pricing table */}
+        {/* ELITE / VIP — manage card. Two variants based on whether the user
+            actually has a Stripe customer record (Stripe-managed subscription
+            vs legacy/comp/manual upgrade). */}
         {isElite && (
           <div className="bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl p-6 text-white">
             <div className="flex items-center gap-3 mb-3">
@@ -385,19 +390,39 @@ export default function SettingsPage() {
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider opacity-90">Current plan</p>
-                <p className="text-2xl font-extrabold leading-tight">You're on Elite</p>
+                <p className="text-2xl font-extrabold leading-tight">You&apos;re on Elite</p>
               </div>
             </div>
-            <p className="text-sm text-white/90 mb-5">
-              Full access to Power Study Group, AI tutor sessions, unlimited diagnostics, and everything else. Manage your billing, change plans, or cancel any time through the Stripe portal.
-            </p>
-            <button
-              onClick={handleManagePortal}
-              disabled={managingPortal}
-              className="bg-white text-amber-700 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-amber-50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-            >
-              {managingPortal ? "Opening portal…" : "Manage subscription"}
-            </button>
+
+            {hasStripeCustomer ? (
+              <>
+                <p className="text-sm text-white/90 mb-5">
+                  Full access to Power Study Group, AI tutor sessions, unlimited diagnostics, and everything else. Manage your billing, change plans, or cancel any time through the Stripe portal.
+                </p>
+                <button
+                  onClick={handleManagePortal}
+                  disabled={managingPortal}
+                  className="bg-white text-amber-700 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-amber-50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                >
+                  {managingPortal ? "Opening portal…" : "Manage subscription"}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-white/90 mb-5">
+                  Full access to Power Study Group, AI tutor sessions, unlimited diagnostics, and everything else. Your Elite access was provisioned outside of Stripe (comp account, legacy subscription, or support upgrade), so subscription management is handled directly by our team.
+                </p>
+                <a
+                  href="mailto:support@neuromart.ai?subject=Elite%20subscription%20support"
+                  className="inline-flex items-center gap-2 bg-white text-amber-700 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-amber-50 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Contact support
+                </a>
+              </>
+            )}
           </div>
         )}
 
