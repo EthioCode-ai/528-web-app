@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import useAuthStore from "@/stores/authStore";
 import { apiFetch } from "@/lib/api";
 
@@ -32,6 +33,9 @@ export default function DashboardPage() {
   const [gapAnalysis, setGapAnalysis] = useState(null);
   const [wrongAnswerCount, setWrongAnswerCount] = useState(0);
   const [showFocusInfo, setShowFocusInfo] = useState(false);
+  const [startingStudyGroup, setStartingStudyGroup] = useState(false);
+  const [studyGroupError, setStudyGroupError] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
     apiFetch("/diagnostic/gap-analysis").then(setGapAnalysis).catch(() => {});
@@ -42,6 +46,22 @@ export default function DashboardPage() {
       })
       .catch(() => {});
   }, []);
+
+  async function handleStartStudyGroup(topicId) {
+    if (startingStudyGroup || topicId == null) return;
+    setStartingStudyGroup(true);
+    setStudyGroupError(null);
+    try {
+      const result = await apiFetch("/study-group/start", {
+        method: "POST",
+        body: JSON.stringify({ topicId }),
+      });
+      router.push(`/study-group/${result.sessionId}`);
+    } catch (err) {
+      setStudyGroupError(err.message || "Failed to start session");
+      setStartingStudyGroup(false);
+    }
+  }
 
   const hasStats = gapAnalysis && gapAnalysis.totalQuestionsAnswered > 0;
   const readiness = gapAnalysis?.readinessEstimate;
@@ -207,6 +227,70 @@ export default function DashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* ── Study Group available (Elite-tier feature, surfaces from weak topics) ── */}
+      {gapAnalysis && gapAnalysis.weakAreas?.length > 0 && (() => {
+        const weakest = gapAnalysis.weakAreas[0];
+        const isElite = tier === "elite" || tier === "vip";
+        const canStart = isElite && weakest.topicId != null;
+        return (
+          <div className="bg-gradient-to-br from-[#1a56db] to-[#1648b8] rounded-2xl p-6 shadow-lg mb-6 text-white">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex-1 min-w-[260px]">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                    Elite · Power Study Group
+                  </span>
+                </div>
+                <h2 className="text-xl font-bold leading-tight mb-1">
+                  Study Group available for{" "}
+                  <span className="underline decoration-white/40 decoration-2 underline-offset-2">
+                    {weakest.topic}
+                  </span>
+                </h2>
+                <p className="text-sm text-white/85">
+                  Three AI tutors · 20-minute focused session · updates your mastery in real time
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                {canStart ? (
+                  <button
+                    onClick={() => handleStartStudyGroup(weakest.topicId)}
+                    disabled={startingStudyGroup}
+                    className="bg-white text-[#1a56db] font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {startingStudyGroup ? "Starting…" : "Start session →"}
+                  </button>
+                ) : !isElite ? (
+                  <Link
+                    href="/settings"
+                    className="inline-block bg-white text-[#1a56db] font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-slate-100 transition-colors"
+                  >
+                    Upgrade to unlock
+                  </Link>
+                ) : (
+                  <Link
+                    href="/study-group"
+                    className="inline-block bg-white text-[#1a56db] font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-slate-100 transition-colors"
+                  >
+                    Open Study Group
+                  </Link>
+                )}
+              </div>
+            </div>
+            {studyGroupError && (
+              <p className="text-xs bg-red-500/20 text-red-50 mt-4 px-3 py-2 rounded-lg">
+                {studyGroupError}
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Focus Areas ── */}
       {gapAnalysis && gapAnalysis.weakAreas?.length > 0 && (
