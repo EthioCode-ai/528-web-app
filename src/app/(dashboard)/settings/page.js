@@ -363,7 +363,7 @@ export default function SettingsPage() {
           <h2 className="text-base font-bold text-slate-900">Subscription</h2>
           {(tier === "scholar" || isElite) && (
             <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${
-              isElite ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+              isElite ? "bg-amber-600 text-white" : "bg-blue-100 text-blue-700"
             }`}>
               {isElite ? "Elite" : "Scholar"}
             </span>
@@ -381,7 +381,7 @@ export default function SettingsPage() {
             actually has a Stripe customer record (Stripe-managed subscription
             vs legacy/comp/manual upgrade). */}
         {isElite && (
-          <div className="bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl p-6 text-white">
+          <div className="bg-gradient-to-br from-amber-600 to-amber-800 rounded-2xl p-6 text-white">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
@@ -396,25 +396,25 @@ export default function SettingsPage() {
 
             {hasStripeCustomer ? (
               <>
-                <p className="text-sm text-white/90 mb-5">
+                <p className="text-sm text-white/95 mb-5">
                   Full access to Power Study Group, AI tutor sessions, unlimited diagnostics, and everything else. Manage your billing, change plans, or cancel any time through the Stripe portal.
                 </p>
                 <button
                   onClick={handleManagePortal}
                   disabled={managingPortal}
-                  className="bg-white text-amber-700 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-amber-50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                  className="bg-white text-amber-800 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-amber-50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                 >
                   {managingPortal ? "Opening portal…" : "Manage subscription"}
                 </button>
               </>
             ) : (
               <>
-                <p className="text-sm text-white/90 mb-5">
+                <p className="text-sm text-white/95 mb-5">
                   Full access to Power Study Group, AI tutor sessions, unlimited diagnostics, and everything else. Your Elite access was provisioned outside of Stripe (comp account, legacy subscription, or support upgrade), so subscription management is handled directly by our team.
                 </p>
                 <a
                   href="mailto:support@neuromart.ai?subject=Elite%20subscription%20support"
-                  className="inline-flex items-center gap-2 bg-white text-amber-700 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-amber-50 transition-colors"
+                  className="inline-flex items-center gap-2 bg-white text-amber-800 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-amber-50 transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />

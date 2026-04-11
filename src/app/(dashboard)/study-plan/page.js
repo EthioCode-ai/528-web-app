@@ -60,6 +60,13 @@ export default function StudyPlanPage() {
   };
 
   const handleGenerate = async () => {
+    // Pre-check exam date — avoids a wasted API round-trip and a confusing
+    // generic 400 error for users who haven't set their test date yet.
+    if (!user?.test_date) {
+      setNeedsTestDate(true);
+      alert("Set your MCAT exam date in Settings first, then come back to generate your plan.");
+      return;
+    }
     setGenerating(true);
     try {
       const data = await apiFetch("/study-plan/generate", { method: "POST" });
@@ -71,7 +78,7 @@ export default function StudyPlanPage() {
       const msg = err.message?.toLowerCase() || "";
       if (msg.includes("test date") || msg.includes("test_date") || msg.includes("400")) {
         setNeedsTestDate(true);
-        alert("Set your MCAT test date in Settings first, then come back to generate your plan.");
+        alert("Set your MCAT exam date in Settings first, then come back to generate your plan.");
       } else {
         alert("Failed to generate study plan. Try again.");
       }
@@ -133,10 +140,15 @@ export default function StudyPlanPage() {
           <p className="text-sm text-slate-500 mb-5 max-w-md mx-auto leading-relaxed">
             Generate a personalized study plan based on your diagnostic results, target score, and available study time.
           </p>
-          {needsTestDate ? (
-            <a href="/settings" className="inline-block border-2 border-[#1a56db] text-[#1a56db] font-bold text-sm px-6 py-3 rounded-xl hover:bg-[#1a56db]/5">
-              Set Test Date in Settings →
-            </a>
+          {(needsTestDate || !user?.test_date) ? (
+            <div className="space-y-3">
+              <p className="text-xs text-amber-600 font-semibold">
+                You need to set your MCAT exam date before generating a plan.
+              </p>
+              <a href="/settings" className="inline-block border-2 border-[#1a56db] text-[#1a56db] font-bold text-sm px-6 py-3 rounded-xl hover:bg-[#1a56db]/5">
+                Set Exam Date in Settings →
+              </a>
+            </div>
           ) : (
             <button
               onClick={handleGenerate}
@@ -187,15 +199,15 @@ export default function StudyPlanPage() {
                   onClick={() => setSelectedWeek(i)}
                   className={`flex-shrink-0 px-4 py-2.5 rounded-xl border text-center min-w-[80px] cursor-pointer transition-colors ${
                     selectedWeek === i
-                      ? "bg-[#1a56db]/10 border-[#1a56db]"
+                      ? "bg-[#1a56db]/10 border-[#1a56db] dark:bg-[#1a56db] dark:border-[#1a56db]"
                       : "bg-white border-slate-200 hover:border-slate-300"
                   }`}
                 >
-                  <p className={`text-xs font-bold ${selectedWeek === i ? "text-[#1a56db]" : "text-slate-500"}`}>
+                  <p className={`text-xs font-bold ${selectedWeek === i ? "text-[#1a56db] dark:text-white" : "text-slate-500"}`}>
                     Wk {w.week_number || i + 1}
                   </p>
                   {w.theme && (
-                    <p className={`text-[10px] mt-0.5 truncate max-w-[80px] ${selectedWeek === i ? "text-[#1a56db]" : "text-slate-400"}`}>
+                    <p className={`text-[10px] mt-0.5 truncate max-w-[80px] ${selectedWeek === i ? "text-[#1a56db] dark:text-white/90" : "text-slate-400"}`}>
                       {w.theme}
                     </p>
                   )}
