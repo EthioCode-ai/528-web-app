@@ -111,10 +111,10 @@ export default function DashboardLayout({ children }) {
                 key={link.href}
                 href={link.href}
                 title={collapsed ? link.label : undefined}
-                className={`flex items-center ${collapsed ? "justify-center" : ""} gap-3 ${collapsed ? "px-0 py-2.5" : "px-3 py-2"} rounded-lg text-[13px] font-medium mb-0.5 transition-colors ${
+                className={`flex items-center ${collapsed ? "justify-center" : ""} gap-3 ${collapsed ? "px-0 py-2.5" : "px-3 py-2"} rounded-lg text-[19px] font-medium mb-0.5 transition-colors ${
                   isActive
-                    ? "bg-[#1a56db]/10 text-[#1a56db]"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                    ? "bg-[#1a56db]/10 text-[#1a56db] dark:bg-[#1a56db]/25 dark:text-white"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800 dark:text-slate-200 dark:hover:bg-slate-700/50 dark:hover:text-white"
                 }`}
               >
                 <svg
