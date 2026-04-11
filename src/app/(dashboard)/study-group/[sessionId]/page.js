@@ -276,6 +276,8 @@ export default function SessionPage({ params }) {
 
   const speakingPersona = sending ? currentPhasePersona(phase) : null;
   const isCompleted = phase === "completed" || session?.status === "completed";
+  const isAbandoned = session?.status === "abandoned";
+  const isInteractive = !isCompleted && !isAbandoned;
   const isQuizPhase = phase === "quiz" || phase === "confirm";
 
   return (
@@ -319,7 +321,7 @@ export default function SessionPage({ params }) {
                 {showDivider && <PhaseDivider from={prevPhase} to={m.phase} />}
                 <MessageBubble
                   message={m}
-                  isActiveQuiz={activeQuizQuestionId === m.id}
+                  isActiveQuiz={isInteractive && activeQuizQuestionId === m.id}
                   userAnswer={userAnswerByQuestionId[m.id]}
                   onAnswer={(letter) => send(letter)}
                   sending={sending}
@@ -327,14 +329,39 @@ export default function SessionPage({ params }) {
               </div>
             );
           })}
-          {sending && !isCompleted && (
+          {sending && isInteractive && (
             <ThinkingIndicator persona={speakingPersona || "professor"} />
           )}
         </div>
       </div>
 
-      {/* Input bar — hidden during quiz/confirm (buttons live in quiz cards) and when completed */}
-      {!isCompleted && !isQuizPhase && (
+      {/* Abandoned session notice — read-only, no input */}
+      {isAbandoned && (
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 flex items-center justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-slate-200 text-slate-500 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-700">This session was abandoned</p>
+              <p className="text-xs text-slate-500">
+                Read-only — you can review the transcript above, but new messages can't be sent.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => router.push("/study-group")}
+            className="bg-[#1a56db] text-white font-bold text-sm px-4 py-2 rounded-xl hover:bg-[#1648b8] transition-colors flex-shrink-0"
+          >
+            Back to Study Group
+          </button>
+        </div>
+      )}
+
+      {/* Input bar — hidden during quiz/confirm (buttons live in quiz cards), when completed, and when abandoned */}
+      {isInteractive && !isQuizPhase && (
         <form
           onSubmit={handleSubmit}
           className="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm flex items-end gap-3"
@@ -363,7 +390,7 @@ export default function SessionPage({ params }) {
         </form>
       )}
 
-      {!isCompleted && isQuizPhase && !activeQuizQuestionId && !sending && (
+      {isInteractive && isQuizPhase && !activeQuizQuestionId && !sending && (
         <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-500 text-center">
           Waiting for the next question…
         </div>
