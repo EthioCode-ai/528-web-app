@@ -676,7 +676,7 @@ function QuizCard({ message, meta, isActive, userAnswer, onAnswer, sending }) {
                 className={`text-left flex items-start gap-3 px-3 py-2.5 rounded-lg border text-sm transition-all ${style}`}
               >
                 <span className="font-bold flex-shrink-0">{letter}.</span>
-                <span className="flex-1">{choice}</span>
+                <div className="flex-1 [&_p]:!mb-0"><Markdown>{choice}</Markdown></div>
                 {icon}
               </button>
             );
