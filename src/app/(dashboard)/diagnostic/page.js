@@ -6,10 +6,11 @@ import useDiagnosticStore from "@/stores/diagnosticStore";
 import useTutorStore from "@/stores/tutorStore";
 import useAuthStore from "@/stores/authStore";
 import DataTable from "@/components/DataTable";
+import dynamic from "next/dynamic";
 import QuestionChart from "@/components/QuestionChart";
 import QuestionDiagram from "@/components/QuestionDiagram";
-import QuestionMolecule from "@/components/QuestionMolecule";
-import QuestionPathway from "@/components/QuestionPathway";
+const QuestionMolecule = dynamic(() => import("@/components/QuestionMolecule"), { ssr: false });
+const QuestionPathway = dynamic(() => import("@/components/QuestionPathway"), { ssr: false });
 import Markdown from "@/components/Markdown";
 
 const SECTION_COLORS = {

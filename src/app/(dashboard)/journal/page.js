@@ -7,9 +7,10 @@ import useAuthStore from "@/stores/authStore";
 import Markdown from "@/components/Markdown";
 import DataTable from "@/components/DataTable";
 import QuestionChart from "@/components/QuestionChart";
+import dynamic from "next/dynamic";
 import QuestionDiagram from "@/components/QuestionDiagram";
-import QuestionMolecule from "@/components/QuestionMolecule";
-import QuestionPathway from "@/components/QuestionPathway";
+const QuestionMolecule = dynamic(() => import("@/components/QuestionMolecule"), { ssr: false });
+const QuestionPathway = dynamic(() => import("@/components/QuestionPathway"), { ssr: false });
 
 const SECTION_COLORS = {
   "Chem/Phys": { bg: "bg-blue-50", text: "text-blue-600" },

@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import useAuthStore from "@/stores/authStore";
 import { apiFetch } from "@/lib/api";
 import Markdown from "@/components/Markdown";
+import dynamic from "next/dynamic";
 import DataTable from "@/components/DataTable";
 import QuestionChart from "@/components/QuestionChart";
-import QuestionMolecule from "@/components/QuestionMolecule";
-import QuestionPathway from "@/components/QuestionPathway";
+const QuestionMolecule = dynamic(() => import("@/components/QuestionMolecule"), { ssr: false });
+const QuestionPathway = dynamic(() => import("@/components/QuestionPathway"), { ssr: false });
 
 // ============================================================
 // Active Study Group session page
