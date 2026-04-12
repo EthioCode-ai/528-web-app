@@ -8,6 +8,8 @@ import useAuthStore from "@/stores/authStore";
 import DataTable from "@/components/DataTable";
 import QuestionChart from "@/components/QuestionChart";
 import QuestionDiagram from "@/components/QuestionDiagram";
+import QuestionMolecule from "@/components/QuestionMolecule";
+import QuestionPathway from "@/components/QuestionPathway";
 import Markdown from "@/components/Markdown";
 
 const SECTION_COLORS = {
@@ -270,6 +272,12 @@ export default function DiagnosticPage() {
           }
           if (visual.type === "diagram") {
             return <QuestionDiagram key={idx} url={visual.url} title={visual.title} />;
+          }
+          if (visual.type === "molecule") {
+            return <QuestionMolecule key={idx} smiles={visual.smiles} title={visual.title} />;
+          }
+          if (visual.type === "pathway") {
+            return <QuestionPathway key={idx} syntax={visual.syntax} title={visual.title} />;
           }
           return null;
         })}

@@ -7,6 +7,8 @@ import { apiFetch } from "@/lib/api";
 import Markdown from "@/components/Markdown";
 import DataTable from "@/components/DataTable";
 import QuestionChart from "@/components/QuestionChart";
+import QuestionMolecule from "@/components/QuestionMolecule";
+import QuestionPathway from "@/components/QuestionPathway";
 
 // ============================================================
 // Active Study Group session page
@@ -630,6 +632,12 @@ function QuizCard({ message, meta, isActive, userAnswer, onAnswer, sending }) {
           }
           if (visual.type === "chart") {
             return <QuestionChart key={idx} chartType={visual.chartType} title={visual.title} xLabel={visual.xLabel} yLabel={visual.yLabel} datasets={visual.datasets} />;
+          }
+          if (visual.type === "molecule") {
+            return <QuestionMolecule key={idx} smiles={visual.smiles} title={visual.title} />;
+          }
+          if (visual.type === "pathway") {
+            return <QuestionPathway key={idx} syntax={visual.syntax} title={visual.title} />;
           }
           return null;
         })}
