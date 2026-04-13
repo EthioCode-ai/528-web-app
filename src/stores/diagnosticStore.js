@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { apiFetch } from "@/lib/api";
+import { track } from "@/lib/analytics";
 
 const useDiagnosticStore = create((set, get) => ({
   attemptId: null,
@@ -26,6 +27,7 @@ const useDiagnosticStore = create((set, get) => ({
         body: JSON.stringify({ totalQuestions }),
       });
       set({ attemptId: data.id, totalQuestions, loading: false });
+      track("diagnostic_started", { attemptId: data.id, totalQuestions });
       await get().fetchNextQuestion();
       return true;
     } catch (err) {
@@ -46,6 +48,7 @@ const useDiagnosticStore = create((set, get) => ({
         body: JSON.stringify({ totalQuestions: 100, sectionCode }),
       });
       set({ attemptId: data.id, totalQuestions: 100, loading: false });
+      track("section_drill_started", { attemptId: data.id, sectionCode });
       await get().fetchNextQuestion();
       return true;
     } catch (err) {
@@ -132,7 +135,7 @@ const useDiagnosticStore = create((set, get) => ({
   },
 
   completeDiagnostic: async () => {
-    const { attemptId } = get();
+    const { attemptId, sectionFilter } = get();
     if (!attemptId) return;
     set({ loading: true });
     try {
@@ -140,6 +143,13 @@ const useDiagnosticStore = create((set, get) => ({
         method: "POST",
       });
       set({ results: data, loading: false });
+      track("diagnostic_completed", {
+        attemptId,
+        sectionFilter,
+        correct: data?.correct,
+        total: data?.total,
+        accuracy: data?.total ? Math.round((data.correct / data.total) * 100) : null,
+      });
     } catch {
       set({ loading: false });
     }

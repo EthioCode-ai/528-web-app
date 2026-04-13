@@ -4,6 +4,7 @@ import { use, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import useAuthStore from "@/stores/authStore";
 import { apiFetch } from "@/lib/api";
+import { track } from "@/lib/analytics";
 import Markdown from "@/components/Markdown";
 import dynamic from "next/dynamic";
 import DataTable from "@/components/DataTable";
@@ -230,6 +231,11 @@ export default function SessionPage({ params }) {
         try {
           const c = await apiFetch(`/study-group/${sessionId}/complete`, { method: "POST" });
           setCompletionData(c);
+          track("study_group_completed", {
+            sessionId,
+            quizCorrect: result.quizProgress?.correct,
+            quizTotal: result.quizProgress?.total,
+          });
         } catch {
           // non-fatal
         }

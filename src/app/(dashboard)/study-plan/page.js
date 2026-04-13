@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
+import { track } from "@/lib/analytics";
 
 const BLOCK_COLORS = {
   content_review: "border-indigo-500 text-indigo-600",
@@ -35,6 +36,7 @@ export default function StudyPlanPage() {
   const [planStale, setPlanStale] = useState(false);
 
   useEffect(() => {
+    track("study_plan_viewed", { tier });
     if (isElite) {
       loadPlan();
     } else {

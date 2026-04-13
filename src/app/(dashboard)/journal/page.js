@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
 import Markdown from "@/components/Markdown";
+import { track } from "@/lib/analytics";
 import DataTable from "@/components/DataTable";
 import QuestionChart from "@/components/QuestionChart";
 import dynamic from "next/dynamic";
@@ -64,6 +65,12 @@ export default function WrongAnswerJournalPage() {
       const data = await apiFetch(`/wrong-answers/${selectedEntry.id}/review`, {
         method: "POST",
         body: JSON.stringify({ understood }),
+      });
+      track("wrong_answer_reviewed", {
+        entryId: selectedEntry.id,
+        understood,
+        nextReviewDays: data?.nextReviewDays,
+        section: selectedEntry.section,
       });
       alert(
         understood

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
+import { track } from "@/lib/analytics";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function RegisterPage() {
       });
 
       setAuth(data.token, data.user);
+      track("signup_completed", { userId: data.user?.id });
       router.push("/verify-email");
     } catch (err) {
       setError(err.message || "Registration failed. Please try again.");

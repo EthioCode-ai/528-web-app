@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
+import { track } from "@/lib/analytics";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -64,6 +65,7 @@ export default function VerifyEmailPage() {
         body: JSON.stringify({ email: user?.email, code: fullCode }),
       });
 
+      track("email_verified", { email: user?.email });
       router.push("/dashboard");
     } catch (err) {
       setError(err.message || "Verification failed. Please try again.");
@@ -92,7 +94,7 @@ export default function VerifyEmailPage() {
             value={digit}
             onChange={(e) => handleChange(i, e.target.value)}
             onKeyDown={(e) => handleKeyDown(i, e)}
-            className="w-12 h-14 text-center text-xl font-bold text-gray-900 bg-gray-50 border border-gray-300 rounded-[10px] outline-none focus:border-[#1a56db] focus:ring-2 focus:ring-[#1a56db]/20 font-[Inter]"
+            className="ph-no-capture w-12 h-14 text-center text-xl font-bold text-gray-900 bg-gray-50 border border-gray-300 rounded-[10px] outline-none focus:border-[#1a56db] focus:ring-2 focus:ring-[#1a56db]/20 font-[Inter]"
           />
         ))}
       </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useAuthStore from "@/stores/authStore";
 import { apiFetch } from "@/lib/api";
+import { track } from "@/lib/analytics";
 
 // ============================================================
 // Study Group landing page
@@ -137,6 +138,10 @@ export default function StudyGroupPage() {
       const result = await apiFetch("/study-group/start", {
         method: "POST",
         body: JSON.stringify({ topicId }),
+      });
+      track("study_group_started", {
+        topicId,
+        sessionId: result.sessionId,
       });
       router.push(`/study-group/${result.sessionId}`);
     } catch (err) {

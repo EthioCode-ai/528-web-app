@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
+import { track } from "@/lib/analytics";
 
 const QUALITY_BUTTONS = [
   { label: "Blackout", value: 0, color: "border-red-500 text-red-500", desc: "Didn't know at all" },
@@ -66,6 +67,11 @@ export default function FlashcardsPage() {
       await apiFetch(`/flashcards/${card.id}/review`, {
         method: "POST",
         body: JSON.stringify({ quality }),
+      });
+      track("flashcard_reviewed", {
+        cardId: card.id,
+        quality,
+        section: card.section_name,
       });
     } catch {}
 

@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
 import useDiagnosticStore from "@/stores/diagnosticStore";
 import useThemeStore from "@/stores/themeStore";
+import { track } from "@/lib/analytics";
 
 // ============================================================
 // Subscription helpers (module-level — pure functions)
@@ -99,6 +100,12 @@ export default function SettingsPage() {
   const [stripeError, setStripeError] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  // Fire settings_viewed once on mount regardless of tier
+  useEffect(() => {
+    track("settings_viewed", { tier });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Fetch the 6 prices on mount unless the user is already Elite/VIP
   // (Elite users see the manage-subscription card, no pricing table).
   useEffect(() => {
@@ -110,6 +117,7 @@ export default function SettingsPage() {
         if (cancelled) return;
         setPrices(Array.isArray(data) ? data : []);
         setPricesLoading(false);
+        track("pricing_viewed", { tier });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -130,6 +138,7 @@ export default function SettingsPage() {
     if (searchParams?.get("success") !== "true") return;
     let cancelled = false;
     setShowSuccess(true);
+    track("checkout_completed");
     apiFetch("/auth/me")
       .then((freshUser) => {
         if (!cancelled && freshUser) setUser(freshUser);
@@ -158,6 +167,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ priceId }),
       });
       if (!result?.url) throw new Error("No checkout URL returned");
+      track("checkout_started", { priceId });
       // External redirect — must use window.location, not router.push
       window.location.href = result.url;
     } catch (err) {
@@ -230,6 +240,9 @@ export default function SettingsPage() {
 
     try {
       await apiFetch("/auth/account", { method: "DELETE" });
+      // Fire BEFORE logout() — logout calls posthog.reset() which would
+      // detach the event from the identified user otherwise.
+      track("account_deleted");
       logout();
       window.location.href = "/login";
     } catch {

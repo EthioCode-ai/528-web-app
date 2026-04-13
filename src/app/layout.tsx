@@ -5,6 +5,7 @@ import "./globals.css";
 // math formulas in Markdown content render with proper typesetting. Must
 // live in the root layout per Next.js 16's global-CSS-import rule.
 import "katex/dist/katex.min.css";
+import PostHogProvider from "@/components/PostHogProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -28,7 +29,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        <PostHogProvider>{children}</PostHogProvider>
+      </body>
     </html>
   );
 }
