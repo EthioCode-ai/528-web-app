@@ -2,17 +2,32 @@ export default function AuthLayout({ children }) {
   return (
     <div
       style={{
+        position: "relative",
         minHeight: "100vh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #1a56db 0%, #3b82f6 50%, #60a5fa 100%)",
+        backgroundImage: "url('/auth-bg.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
         fontFamily: "'Inter', sans-serif",
         padding: 24,
       }}
     >
+      {/* Dark overlay for card readability — sits between the image and the card */}
+      <div
+        className="bg-black/30"
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+        }}
+      />
       <div
         style={{
+          position: "relative",
+          zIndex: 1,
           width: "100%",
           maxWidth: 420,
           background: "#ffffff",
