@@ -26,8 +26,12 @@ const useDiagnosticStore = create((set, get) => ({
         method: "POST",
         body: JSON.stringify({ totalQuestions }),
       });
-      set({ attemptId: data.id, totalQuestions, loading: false });
-      track("diagnostic_started", { attemptId: data.id, totalQuestions });
+      // Backend may cap totalQuestions for free-tier users (10 for first-ever,
+      // 5 for subsequent). Read the authoritative value from the response so
+      // the progress header doesn't flash the requested count before correcting.
+      const effectiveTotal = data.total_questions || totalQuestions;
+      set({ attemptId: data.id, totalQuestions: effectiveTotal, loading: false });
+      track("diagnostic_started", { attemptId: data.id, totalQuestions: effectiveTotal });
       await get().fetchNextQuestion();
       return true;
     } catch (err) {
