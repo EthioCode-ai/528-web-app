@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
@@ -15,11 +16,13 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isDuplicate, setIsDuplicate] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    setIsDuplicate(false);
     setLoading(true);
 
     try {
@@ -32,7 +35,11 @@ export default function RegisterPage() {
       track("signup_completed", { userId: data.user?.id });
       router.push("/verify-email");
     } catch (err) {
-      setError(err.message || "Registration failed. Please try again.");
+      if (err.status === 409) {
+        setIsDuplicate(true);
+      } else {
+        setError(err.message || "Registration failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -113,7 +120,20 @@ export default function RegisterPage() {
         />
       </div>
 
-      {error && (
+      {isDuplicate && (
+        <div className="mb-4 text-center">
+          <p className="text-red-600 text-[13px] mb-2">
+            An account with this email already exists. Please sign in or use a different email address.
+          </p>
+          <Link
+            href="/login"
+            className="text-[#1a56db] text-[13px] font-semibold hover:underline"
+          >
+            Sign In
+          </Link>
+        </div>
+      )}
+      {error && !isDuplicate && (
         <p className="text-red-600 text-[13px] mb-4 text-center">{error}</p>
       )}
 
@@ -131,9 +151,9 @@ export default function RegisterPage() {
 
       <p className="text-center text-[13px] text-gray-500 mt-5">
         Already have an account?{" "}
-        <a href="/login" className="text-[#1a56db] font-semibold hover:underline">
+        <Link href="/login" className="text-[#1a56db] font-semibold hover:underline">
           Sign in
-        </a>
+        </Link>
       </p>
     </form>
   );
