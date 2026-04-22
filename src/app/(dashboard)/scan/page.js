@@ -17,6 +17,7 @@ export default function ScanPage() {
   const [explanation, setExplanation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [usageLimit, setUsageLimit] = useState(null);
 
   const [chatMode, setChatMode] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
@@ -59,8 +60,8 @@ export default function ScanPage() {
       });
       setExplanation(data.explanation);
     } catch (err) {
-      if (err.message?.includes("403")) {
-        setError("This feature requires 528 Elite.");
+      if (err.status === 403 && (err.body?.error === 'usage_limit' || err.body?.error === 'upgrade_required')) {
+        setUsageLimit(err.body);
       } else {
         setError(err.message || "Failed to analyze image. Please try again.");
       }
@@ -78,8 +79,13 @@ export default function ScanPage() {
         body: JSON.stringify({ explanation, mode, conversationHistory: [], message: null }),
       });
       setChatMessages([{ role: "assistant", content: data.reply }]);
-    } catch {
-      setChatMessages([{ role: "assistant", content: "Sorry, I had trouble starting. Please try again." }]);
+    } catch (err) {
+      if (err.status === 403 && (err.body?.error === 'usage_limit' || err.body?.error === 'upgrade_required')) {
+        setUsageLimit(err.body);
+        setChatMode(null);
+      } else {
+        setChatMessages([{ role: "assistant", content: "Sorry, I had trouble starting. Please try again." }]);
+      }
     }
     setChatLoading(false);
   };
@@ -100,8 +106,12 @@ export default function ScanPage() {
         body: JSON.stringify({ explanation, mode: chatMode, conversationHistory: history, message: null }),
       });
       setChatMessages([...updated, { role: "assistant", content: data.reply }]);
-    } catch {
-      setChatMessages([...updated, { role: "assistant", content: "Sorry, something went wrong. Try again." }]);
+    } catch (err) {
+      if (err.status === 403 && (err.body?.error === 'usage_limit' || err.body?.error === 'upgrade_required')) {
+        setUsageLimit(err.body);
+      } else {
+        setChatMessages([...updated, { role: "assistant", content: "Sorry, something went wrong. Try again." }]);
+      }
     }
     setChatLoading(false);
   };
@@ -301,6 +311,38 @@ export default function ScanPage() {
             <button onClick={() => fileInputRef.current?.click()} className="bg-white border border-slate-200 rounded-xl px-4 flex items-center justify-center cursor-pointer hover:bg-slate-50">
               <span className="text-xl">📷</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Usage-limit / upgrade-required paywall modal */}
+      {usageLimit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+            <div className="text-center">
+              <div className="text-5xl mb-3">🔒</div>
+              <h2 className="text-lg font-bold text-slate-900 mb-3">
+                {usageLimit.error === 'usage_limit' ? 'Plan Limit Reached' : 'Upgrade Required'}
+              </h2>
+              <p className="text-sm text-slate-600 mb-5 leading-relaxed">
+                {usageLimit.message || 'Upgrade to continue.'}
+              </p>
+              <button
+                onClick={() => {
+                  setUsageLimit(null);
+                  router.push('/settings');
+                }}
+                className="w-full bg-[#1a56db] hover:bg-[#1648b8] text-white font-bold py-3 rounded-xl mb-2 cursor-pointer"
+              >
+                {usageLimit.currentTier === 'scholar' ? 'Upgrade to Elite' : 'Upgrade to Scholar'}
+              </button>
+              <button
+                onClick={() => setUsageLimit(null)}
+                className="w-full text-sm text-slate-500 hover:text-slate-700 py-2 cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -593,9 +593,15 @@ export default function SettingsPage() {
         <a href="https://neuromart.ai/privacy-policy" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate-400 underline hover:text-slate-600">
           Privacy Policy
         </a>
+        <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate-400 underline hover:text-slate-600">
+          Terms of Use
+        </a>
         <a href="mailto:support@neuromart.ai" className="block text-sm text-slate-400 underline hover:text-slate-600">
           Contact Support
         </a>
+        <p className="text-[11px] text-slate-500 px-6 leading-relaxed">
+          Subscriptions auto-renew at the end of each billing period. Cancel anytime from this page or your Stripe billing portal.
+        </p>
         <p className="text-[11px] text-slate-300 mt-2">528 AI v1.0.0 | Powered by Neuromart</p>
       </div>
 
