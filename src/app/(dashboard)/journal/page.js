@@ -207,7 +207,7 @@ export default function WrongAnswerJournalPage() {
               </span>
               {isDue && <span className="bg-amber-50 text-amber-600 text-[11px] font-medium px-2 py-0.5 rounded-md">Due</span>}
             </div>
-            <p className="text-sm text-slate-600 leading-relaxed mb-2">{truncate(q.stem)}</p>
+            <div className="text-sm text-slate-600 leading-relaxed mb-2 [&_p]:!mb-0"><Markdown>{truncate(q.stem)}</Markdown></div>
             <div className="flex items-center justify-between">
               <p className="text-xs text-slate-400">
                 You: <span className="text-red-500 font-medium">{entry.user_answer}</span>
@@ -282,7 +282,7 @@ export default function WrongAnswerJournalPage() {
                       return (
                         <div key={letter} className={`flex items-start gap-3 border rounded-xl p-3 mb-2 ${cardClass}`}>
                           <span className={`text-sm font-bold ${isCorrect ? "text-emerald-600" : isUser ? "text-red-600" : "text-slate-400"}`}>{letter}.</span>
-                          <span className="text-sm text-slate-700 flex-1">{text}</span>
+                          <div className="text-sm text-slate-700 flex-1 [&_p]:!mb-0"><Markdown>{text}</Markdown></div>
                           {isUser && !isCorrect && <span className="text-xs text-red-500 font-semibold">(You)</span>}
                           {isCorrect && <span className="text-xs text-emerald-500 font-semibold">✔</span>}
                         </div>

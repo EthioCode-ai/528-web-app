@@ -1,3 +1,5 @@
+import Markdown from "@/components/Markdown";
+
 export default function DataTable({ title, headers, rows }) {
   if (!headers || !rows || rows.length === 0) return null;
 
@@ -15,9 +17,9 @@ export default function DataTable({ title, headers, rows }) {
               {headers.map((h, i) => (
                 <th
                   key={i}
-                  className="px-3 py-2.5 text-left text-xs font-bold text-[#1a56db]"
+                  className="px-3 py-2.5 text-left text-xs font-bold text-[#1a56db] [&_p]:!mb-0"
                 >
-                  {h}
+                  <Markdown>{typeof h === "string" ? h : String(h ?? "")}</Markdown>
                 </th>
               ))}
             </tr>
@@ -29,8 +31,8 @@ export default function DataTable({ title, headers, rows }) {
                 className={`border-b border-slate-100 ${ri % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`}
               >
                 {headers.map((_, ci) => (
-                  <td key={ci} className="px-3 py-2.5 text-sm text-slate-700">
-                    {row[ci] ?? ""}
+                  <td key={ci} className="px-3 py-2.5 text-sm text-slate-700 [&_p]:!mb-0">
+                    <Markdown>{typeof row[ci] === "string" ? row[ci] : String(row[ci] ?? "")}</Markdown>
                   </td>
                 ))}
               </tr>

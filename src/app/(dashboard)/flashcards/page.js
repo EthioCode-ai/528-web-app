@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
 import { track } from "@/lib/analytics";
+import Markdown from "@/components/Markdown";
 
 const QUALITY_BUTTONS = [
   { label: "Blackout", value: 0, color: "border-red-500 text-red-500", desc: "Didn't know at all" },
@@ -267,13 +268,13 @@ export default function FlashcardsPage() {
                         {currentCard.section_name} · {currentCard.topic_name}
                       </p>
                     )}
-                    <p className="text-base text-slate-800 leading-relaxed">{currentCard?.front}</p>
+                    <div className="text-base text-slate-800 leading-relaxed [&_p]:!mb-0"><Markdown>{currentCard?.front || ""}</Markdown></div>
                     <p className="absolute bottom-3 text-[11px] text-slate-400">Tap to flip</p>
                   </div>
                   {/* Back */}
                   <div className="absolute inset-0 bg-slate-50 border border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center [transform:rotateY(180deg)] backface-hidden shadow-sm">
                     <p className="text-[11px] text-emerald-500 font-bold tracking-wider mb-3">ANSWER</p>
-                    <p className="text-base text-slate-800 leading-relaxed">{currentCard?.back}</p>
+                    <div className="text-base text-slate-800 leading-relaxed [&_p]:!mb-0"><Markdown>{currentCard?.back || ""}</Markdown></div>
                     {currentCard?.mnemonic && (
                       <p className="text-xs text-amber-500 mt-3 italic">💡 {currentCard.mnemonic}</p>
                     )}
@@ -329,9 +330,9 @@ export default function FlashcardsPage() {
                   )}
                   <button onClick={() => handleDeleteCard(card.id)} className="text-slate-400 hover:text-red-500 text-base cursor-pointer">✕</button>
                 </div>
-                <p className="text-sm font-semibold text-slate-800 leading-relaxed">{card.front}</p>
+                <div className="text-sm font-semibold text-slate-800 leading-relaxed [&_p]:!mb-0"><Markdown>{card.front || ""}</Markdown></div>
                 <div className="h-px bg-slate-100 my-2.5" />
-                <p className="text-sm text-slate-600 leading-relaxed">{card.back}</p>
+                <div className="text-sm text-slate-600 leading-relaxed [&_p]:!mb-0"><Markdown>{card.back || ""}</Markdown></div>
                 {card.mnemonic && (
                   <p className="text-xs text-amber-500 mt-2 italic">💡 {card.mnemonic}</p>
                 )}

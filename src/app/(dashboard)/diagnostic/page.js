@@ -259,9 +259,9 @@ export default function DiagnosticPage() {
         </div>
 
         {/* Stem */}
-        <p className="text-[15px] leading-relaxed text-slate-800 mb-5">
-          {question.stem}
-        </p>
+        <div className="text-[15px] leading-relaxed text-slate-800 mb-5">
+          <Markdown>{question.stem}</Markdown>
+        </div>
 
         {/* Visuals */}
         {question.visuals && question.visuals.length > 0 && question.visuals.map((visual, idx) => {
@@ -319,7 +319,7 @@ export default function DiagnosticPage() {
                 }`}>
                   {letter}
                 </span>
-                <span className={`text-sm font-medium ${
+                <div className={`text-sm font-medium [&_p]:!mb-0 ${
                   submitted && letter === question.correct
                     ? "text-emerald-700"
                     : submitted && letter === selected
@@ -328,8 +328,8 @@ export default function DiagnosticPage() {
                         ? "text-[#1a56db]"
                         : "text-slate-700"
                 }`}>
-                  {text}
-                </span>
+                  <Markdown>{text}</Markdown>
+                </div>
               </button>
             );
           })}
