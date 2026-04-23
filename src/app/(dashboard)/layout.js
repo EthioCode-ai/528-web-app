@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import useAuthStore from "@/stores/authStore";
 import useThemeStore from "@/stores/themeStore";
+import PeriodicTableModal from "@/components/PeriodicTableModal";
 
 const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" },
@@ -36,6 +37,7 @@ export default function DashboardLayout({ children }) {
 
   const initTheme = useThemeStore((s) => s.initialize);
   const [collapsed, setCollapsed] = useState(false);
+  const [tableOpen, setTableOpen] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -130,6 +132,29 @@ export default function DashboardLayout({ children }) {
               </Link>
             );
           })}
+
+          {/* Periodic Table — opens a global modal (preserves current page state) */}
+          <button
+            type="button"
+            onClick={() => setTableOpen(true)}
+            title={collapsed ? "Periodic Table" : undefined}
+            className={`w-full flex items-center ${collapsed ? "justify-center" : ""} gap-3 ${collapsed ? "px-0 py-2.5" : "px-3 py-2"} rounded-lg text-[16px] font-medium mb-0.5 transition-colors cursor-pointer text-slate-500 hover:bg-slate-50 hover:text-slate-800 dark:text-slate-200 dark:hover:bg-slate-700/50 dark:hover:text-white`}
+          >
+            {/* Atom glyph */}
+            <svg
+              className={`${collapsed ? "w-5 h-5" : "w-[18px] h-[18px]"} flex-shrink-0`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              viewBox="0 0 24 24"
+            >
+              <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+              <ellipse cx="12" cy="12" rx="10" ry="4" />
+              <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)" />
+              <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-60 12 12)" />
+            </svg>
+            {!collapsed && "Periodic Table"}
+          </button>
         </nav>
 
         {/* User info + Logout */}
@@ -168,6 +193,8 @@ export default function DashboardLayout({ children }) {
           {children}
         </div>
       </main>
+
+      <PeriodicTableModal open={tableOpen} onClose={() => setTableOpen(false)} />
     </div>
   );
 }
