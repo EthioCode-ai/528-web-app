@@ -71,9 +71,13 @@ export default function DashboardPage() {
       {/* ── Header ── */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">
-          {`Hello${user?.first_name ? `, ${user.first_name}` : ""}`}
+          {(() => {
+            const h = new Date().getHours();
+            const greeting = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+            return `${greeting}${user?.first_name ? `, ${user.first_name}` : ""} 👋`;
+          })()}
         </h1>
-        <p className="text-sm text-[var(--text-secondary)] mt-1">Ready to study?</p>
+        <p className="text-sm text-[var(--text-secondary)] mt-1">Keep up the momentum. You&apos;re building mastery!</p>
       </div>
 
       {/* ── Stats Bar ── */}
