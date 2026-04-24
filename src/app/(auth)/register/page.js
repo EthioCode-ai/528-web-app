@@ -46,7 +46,33 @@ export default function RegisterPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <>
+      {/* Pictory promo video — bottom-right of the viewport on desktop only.
+          Hidden below 1100px so it doesn't overlap the centered card. */}
+      <div
+        className="hidden min-[1100px]:block"
+        style={{
+          position: "fixed",
+          bottom: 32,
+          right: 32,
+          width: 480,
+          height: 270,
+          zIndex: 6,
+          borderRadius: 12,
+          overflow: "hidden",
+          boxShadow: "0 20px 50px rgba(0,0,0,0.4), 0 8px 20px rgba(0,0,0,0.25)",
+        }}
+      >
+        <iframe
+          src="https://video.pictory.ai/embed/202604242044173853848a7aab788444bb891b413b623b858/20260424221006845Ufd4A0FN5BTYamU"
+          title="528 AI: The MCAT Engine"
+          style={{ width: "100%", height: "100%", border: 0, display: "block" }}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
+      </div>
+
+      <form onSubmit={handleSubmit}>
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div>
           <label
@@ -156,5 +182,6 @@ export default function RegisterPage() {
         </Link>
       </p>
     </form>
+    </>
   );
 }
