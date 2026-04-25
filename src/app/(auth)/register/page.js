@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
@@ -18,6 +19,13 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [isDuplicate, setIsDuplicate] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Portal mount flag — needed because document.body is undefined on the
+  // server. The video iframe is portaled to <body> so it escapes the auth
+  // card's backdrop-filter containing block; otherwise position:fixed
+  // resolves relative to the card (which lands the video center-screen).
+  const [portalReady, setPortalReady] = useState(false);
+  useEffect(() => setPortalReady(true), []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -47,30 +55,36 @@ export default function RegisterPage() {
 
   return (
     <>
-      {/* Pictory promo video — bottom-right of the viewport on desktop only.
-          Hidden below 1100px so it doesn't overlap the centered card. */}
-      <div
-        className="hidden min-[1100px]:block"
-        style={{
-          position: "fixed",
-          bottom: 32,
-          right: 32,
-          width: 480,
-          height: 270,
-          zIndex: 6,
-          borderRadius: 12,
-          overflow: "hidden",
-          boxShadow: "0 20px 50px rgba(0,0,0,0.4), 0 8px 20px rgba(0,0,0,0.25)",
-        }}
-      >
-        <iframe
-          src="https://video.pictory.ai/embed/202604242044173853848a7aab788444bb891b413b623b858/20260424221006845Ufd4A0FN5BTYamU"
-          title="528 AI: The MCAT Engine"
-          style={{ width: "100%", height: "100%", border: 0, display: "block" }}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-        />
-      </div>
+      {/* Pictory promo video — portaled to <body> so it sits at the true
+          bottom-right of the viewport, outside the card's backdrop-filter
+          containing block. Hidden below 1100px so it never overlaps the
+          card on tablets/phones. */}
+      {portalReady &&
+        createPortal(
+          <div
+            className="hidden min-[1100px]:block"
+            style={{
+              position: "fixed",
+              bottom: 32,
+              right: 32,
+              width: 480,
+              height: 270,
+              zIndex: 50,
+              borderRadius: 12,
+              overflow: "hidden",
+              boxShadow: "0 20px 50px rgba(0,0,0,0.4), 0 8px 20px rgba(0,0,0,0.25)",
+            }}
+          >
+            <iframe
+              src="https://video.pictory.ai/embed/202604242044173853848a7aab788444bb891b413b623b858/20260424221006845Ufd4A0FN5BTYamU"
+              title="528 AI: The MCAT Engine"
+              style={{ width: "100%", height: "100%", border: 0, display: "block" }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          </div>,
+          document.body
+        )}
 
       <form onSubmit={handleSubmit}>
       <div className="grid grid-cols-2 gap-3 mb-4">
