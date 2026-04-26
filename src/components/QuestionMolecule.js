@@ -33,9 +33,13 @@ export default function QuestionMolecule({ smiles, title }) {
         if (cancelled || !svgRef.current) return;
 
         const drawer = new SmilesDrawer.SvgDrawer({
-          width: 300,
-          height: 200,
-          bondThickness: 1.5,
+          width: 400,
+          height: 300,
+          bondThickness: 1.2,
+          bondLength: 25,
+          padding: 20,
+          fontSizeLarge: 12,
+          fontSizeSmall: 9,
           compactDrawing: false,
         });
 
@@ -96,8 +100,8 @@ export default function QuestionMolecule({ smiles, title }) {
           <svg
             ref={svgRef}
             className={loading ? "hidden" : "max-w-full"}
-            width="300"
-            height="200"
+            width="400"
+            height="300"
           />
         </div>
       )}
