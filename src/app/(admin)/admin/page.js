@@ -126,7 +126,10 @@ export default function AdminOverviewPage() {
                 <YAxis tick={{ fontSize: 12, fill: "currentColor" }} stroke="rgba(148,163,184,0.4)" />
                 <ReTooltip
                   contentStyle={{ background: "rgba(15,23,42,0.95)", border: "1px solid rgba(148,163,184,0.3)", borderRadius: 8, color: "white" }}
-                  formatter={(value, name, props) => [`${value.toLocaleString()} users (${pct(value, totalUsers)}%)`, props.payload.tier]}
+                  itemStyle={{ color: "white" }}
+                  labelStyle={{ color: "white", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}
+                  labelFormatter={(label) => label}
+                  formatter={(value) => [`${value.toLocaleString()} users (${pct(value, totalUsers)}%)`, "Count"]}
                 />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]} />
               </BarChart>
