@@ -86,6 +86,74 @@ export default function RegisterPage() {
           document.body
         )}
 
+      {/* Mobile-app QR panel — same portal pattern as the video so it
+          anchors to the viewport, not the card's backdrop-filter context.
+          Hidden below md so it never crowds the form on small screens.
+          Apple QR is generated on-the-fly by api.qrserver.com encoding
+          the App Store URL; Google Play card is a placeholder until the
+          Android build ships. */}
+      {portalReady &&
+        createPortal(
+          <div
+            className="hidden min-[1100px]:flex"
+            style={{
+              position: "fixed",
+              bottom: 32,
+              left: 32,
+              gap: 12,
+              zIndex: 50,
+            }}
+          >
+            {/* Apple App Store — LIVE */}
+            <div className="w-[180px] rounded-xl bg-slate-900 border border-slate-700 p-3 flex flex-col items-center text-center shadow-lg">
+              <div className="self-end mb-2 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold inline-flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                LIVE
+              </div>
+              <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=https%3A%2F%2Fapps.apple.com%2Fus%2Fapp%2F528-ai-mcat-study-engine%2Fid6760100060"
+                alt="Scan to install 528 AI on iOS"
+                className="w-32 h-32 rounded bg-white p-1"
+              />
+              <p className="text-cyan-400 text-xs font-bold mt-2">Apple App Store</p>
+              <p className="text-slate-500 text-[10px] mt-0.5">Scan to download on iOS</p>
+              <a
+                href="https://apps.apple.com/us/app/528-ai-mcat-study-engine/id6760100060"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 px-3 py-1.5 rounded-full bg-cyan-400 text-slate-900 text-[11px] font-bold hover:bg-cyan-300 transition-colors inline-flex items-center gap-1"
+              >
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 3a1 1 0 011 1v9.586l3.293-3.293a1 1 0 011.414 1.414l-5 5a1 1 0 01-1.414 0l-5-5a1 1 0 011.414-1.414L9 13.586V4a1 1 0 011-1z" />
+                </svg>
+                Download · LIVE
+              </a>
+            </div>
+
+            {/* Google Play — Coming Soon placeholder */}
+            <div className="w-[180px] rounded-xl bg-slate-900 border border-slate-700 p-3 flex flex-col items-center text-center shadow-lg">
+              <div className="self-end mb-2 h-[18px]" />
+              <div className="w-32 h-32 rounded bg-slate-800/60 border border-slate-700 flex flex-col items-center justify-center gap-1.5">
+                <svg className="w-10 h-10 text-slate-500" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <rect x="6" y="2.5" width="12" height="19" rx="2.25" />
+                  <line x1="11" y1="18.5" x2="13" y2="18.5" strokeLinecap="round" />
+                </svg>
+                <p className="text-slate-400 text-[10px] font-semibold">Google Play<br/>QR Code</p>
+              </div>
+              <p className="text-slate-300 text-xs font-bold mt-2">Google Play Store</p>
+              <p className="text-slate-500 text-[10px] mt-0.5">Scan to download on Android</p>
+              <button
+                type="button"
+                disabled
+                className="mt-2 px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400 text-[11px] font-semibold cursor-not-allowed"
+              >
+                Coming Soon
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
+
       <form onSubmit={handleSubmit}>
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div>
