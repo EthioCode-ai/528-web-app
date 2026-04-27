@@ -65,7 +65,7 @@ export default function RegisterPage() {
             className="hidden min-[1100px]:block"
             style={{
               position: "fixed",
-              bottom: 32,
+              bottom: 96,
               right: 32,
               width: 480,
               height: 270,
