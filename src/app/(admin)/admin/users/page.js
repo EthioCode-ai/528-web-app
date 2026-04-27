@@ -121,8 +121,8 @@ export default function AdminUsersPage() {
                 <TableHead>Name</TableHead>
                 <TableHead className="max-w-[220px]">Email</TableHead>
                 <TableHead className="w-20">Tier</TableHead>
-                <TableHead className="text-right w-20">Questions</TableHead>
-                <TableHead className="text-right w-20">Accuracy</TableHead>
+                <TableHead className="text-right w-16">Qs</TableHead>
+                <TableHead className="text-right w-14">Acc</TableHead>
                 <TableHead className="w-24">Signed up</TableHead>
                 <TableHead className="w-24">Last active</TableHead>
               </TableRow>
