@@ -33,10 +33,25 @@ export default function AdminUsersPage() {
   const [tier, setTier] = useState("all");
   const [activity, setActivity] = useState("any");
   const [page, setPage] = useState(1);
+  // Sort state — default mirrors the previous server-side ORDER BY
+  // (id desc = newest first). Click handler below toggles per spec:
+  // first click on a column → asc; same column second click → desc.
+  const [sortKey, setSortKey] = useState("id");
+  const [sortOrder, setSortOrder] = useState("desc");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const debounceRef = useRef(null);
+
+  function handleSort(key) {
+    if (sortKey === key) {
+      setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortOrder("asc");
+    }
+    setPage(1);
+  }
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -62,6 +77,8 @@ export default function AdminUsersPage() {
     if (activity !== "any") params.set("activity", activity);
     params.set("page", String(page));
     params.set("limit", String(PAGE_SIZE));
+    params.set("sort", sortKey);
+    params.set("order", sortOrder);
 
     apiFetch(`/admin/users?${params.toString()}`)
       .then((res) => !cancelled && setData(res))
@@ -70,7 +87,7 @@ export default function AdminUsersPage() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedSearch, tier, activity, page]);
+  }, [debouncedSearch, tier, activity, page, sortKey, sortOrder]);
 
   const rows = data?.users || [];
 
@@ -117,15 +134,15 @@ export default function AdminUsersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead className="max-w-[220px]">Email</TableHead>
-                <TableHead className="w-20">Tier</TableHead>
+                <SortableHead className="w-12" k="id"          sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>ID</SortableHead>
+                <SortableHead k="name"                          sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Name</SortableHead>
+                <SortableHead className="max-w-[220px]" k="email" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Email</SortableHead>
+                <SortableHead className="w-20" k="tier"         sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Tier</SortableHead>
                 <TableHead className="text-center w-12" title="Platform">Plat</TableHead>
-                <TableHead className="text-right w-16">Qs</TableHead>
-                <TableHead className="text-right w-14">Acc</TableHead>
-                <TableHead className="w-24">Signed up</TableHead>
-                <TableHead className="w-24">Last active</TableHead>
+                <SortableHead className="text-right w-16" k="qs" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort} align="right">Qs</SortableHead>
+                <SortableHead className="text-right w-14" k="acc" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort} align="right">Acc</SortableHead>
+                <SortableHead className="w-24" k="signed_up"    sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Signed up</SortableHead>
+                <SortableHead className="w-24" k="last_active"  sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Last active</SortableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -193,6 +210,28 @@ export default function AdminUsersPage() {
         onPageChange={setPage}
       />
     </div>
+  );
+}
+
+// Sortable column header. Renders the existing TableHead with click
+// behavior + arrow indicator. Clicking a different column starts asc
+// (per spec: "Click any column header to sort ascending"). Clicking
+// the active column toggles between asc and desc.
+function SortableHead({ k, sortKey, sortOrder, onSort, children, align, className = "" }) {
+  const active = sortKey === k;
+  const arrow = active ? (sortOrder === "asc" ? "▲" : "▼") : "";
+  return (
+    <TableHead
+      onClick={() => onSort(k)}
+      className={`cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200 transition-colors ${
+        active ? "text-purple-600 dark:text-purple-400" : ""
+      } ${className}`}
+    >
+      <span className={`inline-flex items-center gap-1 ${align === "right" ? "w-full justify-end" : ""}`}>
+        {children}
+        {arrow && <span className="text-[10px] leading-none">{arrow}</span>}
+      </span>
+    </TableHead>
   );
 }
 
