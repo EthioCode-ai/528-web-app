@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Class-based dark mode. Without this, Tailwind v4's `dark:` variant
+   compiles against @media (prefers-color-scheme: dark) — i.e., it
+   only ever fires from OS preference. Both useThemeStore (student)
+   and useAdminTheme (admin) toggle dark mode by adding a `.dark`
+   class to a wrapper element, so we need this declaration for any
+   `dark:bg-*`, `dark:text-*`, etc. utility to actually activate
+   from those toggles. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f8fafc;
   --foreground: #171717;
