@@ -39,20 +39,12 @@ export default function AdminSidebar({ collapsed, setCollapsed }) {
       <div className={`relative ${collapsed ? "px-2" : "px-5"} pt-5 pb-4 border-b border-slate-100 dark:border-slate-800`}>
         {!collapsed ? (
           <div className="flex flex-col items-center w-full">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center mb-2">
-              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 16l-4-4 1.41-1.41L11 14.17l5.59-5.59L18 10l-7 7z"/>
-              </svg>
-            </div>
+            <img src="/logo.png" alt="528 AI" className="w-12 h-12 mb-2" />
             <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 tracking-wide uppercase">Admin Console</p>
           </div>
         ) : (
           <div className="flex justify-center">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 16l-4-4 1.41-1.41L11 14.17l5.59-5.59L18 10l-7 7z"/>
-              </svg>
-            </div>
+            <img src="/logo.png" alt="528 AI" className="w-9 h-9" />
           </div>
         )}
         <button

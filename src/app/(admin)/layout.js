@@ -41,6 +41,17 @@ export default function AdminLayout({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Override the root layout's tab title for the admin tree. Restored
+  // on unmount so the student app's title isn't left stale when the
+  // user navigates away. Layout is "use client", so metadata export
+  // isn't available here — document.title is the App Router escape
+  // hatch for client-only title control.
+  useEffect(() => {
+    const prev = document.title;
+    document.title = "528 AI - Admin";
+    return () => { document.title = prev; };
+  }, []);
+
   if (!isAuthenticated() || !initialized) {
     return (
       <div className={dark ? "dark" : ""}>
