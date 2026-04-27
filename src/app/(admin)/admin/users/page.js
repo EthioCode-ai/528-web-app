@@ -12,6 +12,29 @@ import DataPagination from "@/components/admin/DataPagination";
 
 const PAGE_SIZE = 50;
 
+// Sortable column header — defined ABOVE the page component (avoids any
+// JS hoisting weirdness with function declarations under React Fast
+// Refresh / Turbopack). Renders a real <button> inside the <th> so the
+// click handler is bulletproof across browsers — `<th onClick>` works
+// in modern Chrome/Firefox/Safari but a button is the universal pattern.
+function SortableHead({ sortBy, sortKey, sortOrder, onSort, children, align, className = "" }) {
+  const active = sortKey === sortBy;
+  const arrow = active ? (sortOrder === "asc" ? "▲" : "▼") : "";
+  const justify = align === "right" ? "justify-end" : "justify-start";
+  return (
+    <TableHead className={`p-0 ${active ? "text-purple-600 dark:text-purple-400" : ""} ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortBy)}
+        className={`w-full h-9 px-3 cursor-pointer select-none flex items-center gap-1 ${justify} text-xs font-semibold uppercase tracking-wider hover:text-slate-700 dark:hover:text-slate-200 transition-colors`}
+      >
+        {children}
+        {arrow && <span className="text-[10px] leading-none">{arrow}</span>}
+      </button>
+    </TableHead>
+  );
+}
+
 const TIER_OPTIONS = [
   { value: "all", label: "All tiers" },
   { value: "free", label: "Free" },
@@ -134,15 +157,15 @@ export default function AdminUsersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableHead className="w-12" k="id"          sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>ID</SortableHead>
-                <SortableHead k="name"                          sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Name</SortableHead>
-                <SortableHead className="max-w-[220px]" k="email" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Email</SortableHead>
-                <SortableHead className="w-20" k="tier"         sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Tier</SortableHead>
+                <SortableHead className="w-12"          sortBy="id"          sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>ID</SortableHead>
+                <SortableHead                            sortBy="name"        sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Name</SortableHead>
+                <SortableHead className="max-w-[220px]" sortBy="email"       sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Email</SortableHead>
+                <SortableHead className="w-20"          sortBy="tier"        sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Tier</SortableHead>
                 <TableHead className="text-center w-12" title="Platform">Plat</TableHead>
-                <SortableHead className="text-right w-16" k="qs" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort} align="right">Qs</SortableHead>
-                <SortableHead className="text-right w-14" k="acc" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort} align="right">Acc</SortableHead>
-                <SortableHead className="w-24" k="signed_up"    sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Signed up</SortableHead>
-                <SortableHead className="w-24" k="last_active"  sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Last active</SortableHead>
+                <SortableHead className="w-16"          sortBy="qs"          sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort} align="right">Qs</SortableHead>
+                <SortableHead className="w-14"          sortBy="acc"         sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort} align="right">Acc</SortableHead>
+                <SortableHead className="w-24"          sortBy="signed_up"   sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Signed up</SortableHead>
+                <SortableHead className="w-24"          sortBy="last_active" sortKey={sortKey} sortOrder={sortOrder} onSort={handleSort}>Last active</SortableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -210,28 +233,6 @@ export default function AdminUsersPage() {
         onPageChange={setPage}
       />
     </div>
-  );
-}
-
-// Sortable column header. Renders the existing TableHead with click
-// behavior + arrow indicator. Clicking a different column starts asc
-// (per spec: "Click any column header to sort ascending"). Clicking
-// the active column toggles between asc and desc.
-function SortableHead({ k, sortKey, sortOrder, onSort, children, align, className = "" }) {
-  const active = sortKey === k;
-  const arrow = active ? (sortOrder === "asc" ? "▲" : "▼") : "";
-  return (
-    <TableHead
-      onClick={() => onSort(k)}
-      className={`cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200 transition-colors ${
-        active ? "text-purple-600 dark:text-purple-400" : ""
-      } ${className}`}
-    >
-      <span className={`inline-flex items-center gap-1 ${align === "right" ? "w-full justify-end" : ""}`}>
-        {children}
-        {arrow && <span className="text-[10px] leading-none">{arrow}</span>}
-      </span>
-    </TableHead>
   );
 }
 
