@@ -117,27 +117,26 @@ export default function AdminUsersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16">ID</TableHead>
+                <TableHead className="w-12">ID</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Tier</TableHead>
-                <TableHead className="text-center">Verified</TableHead>
-                <TableHead className="text-right">Questions</TableHead>
-                <TableHead className="text-right">Accuracy</TableHead>
-                <TableHead>Signed up</TableHead>
-                <TableHead>Last active</TableHead>
+                <TableHead className="max-w-[220px]">Email</TableHead>
+                <TableHead className="w-20">Tier</TableHead>
+                <TableHead className="text-right w-20">Questions</TableHead>
+                <TableHead className="text-right w-20">Accuracy</TableHead>
+                <TableHead className="w-24">Signed up</TableHead>
+                <TableHead className="w-24">Last active</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center text-slate-400">
+                  <TableCell colSpan={8} className="h-24 text-center text-slate-400">
                     Loading…
                   </TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center text-slate-400">
+                  <TableCell colSpan={8} className="h-24 text-center text-slate-400">
                     No users match these filters.
                   </TableCell>
                 </TableRow>
@@ -150,18 +149,24 @@ export default function AdminUsersPage() {
                       <TableCell className="text-xs font-mono text-slate-400 p-0">
                         <Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5">{u.id}</Link>
                       </TableCell>
-                      <TableCell className="p-0"><Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5">{name}</Link></TableCell>
-                      <TableCell className="p-0 text-slate-600 dark:text-slate-300"><Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5">{u.email}</Link></TableCell>
-                      <TableCell className="p-0"><Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5"><TierBadge tier={u.subscription_tier} /></Link></TableCell>
-                      <TableCell className="p-0 text-center">
-                        <Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5">
-                          {u.email_verified ? "✓" : <span className="text-slate-300 dark:text-slate-600">—</span>}
+                      <TableCell className="p-0">
+                        <Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5 truncate max-w-[180px]" title={name}>{name}</Link>
+                      </TableCell>
+                      <TableCell className="p-0 text-slate-600 dark:text-slate-300">
+                        <Link href={`/admin/users/${u.id}`} className="flex items-center gap-1.5 w-full px-3 py-2.5 truncate" title={u.email}>
+                          <span className="truncate max-w-[180px]">{u.email}</span>
+                          {u.email_verified ? (
+                            <span title="Verified" className="text-emerald-500 flex-shrink-0">✓</span>
+                          ) : (
+                            <span title="Unverified" className="text-amber-500 flex-shrink-0">·</span>
+                          )}
                         </Link>
                       </TableCell>
+                      <TableCell className="p-0"><Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5"><TierBadge tier={u.subscription_tier} /></Link></TableCell>
                       <TableCell className="p-0 text-right tabular-nums"><Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5">{(u.total_questions_answered || 0).toLocaleString()}</Link></TableCell>
                       <TableCell className="p-0 text-right tabular-nums"><Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5">{u.total_questions_answered ? `${accuracy}%` : "—"}</Link></TableCell>
-                      <TableCell className="p-0 text-xs text-slate-500"><Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5">{formatRelative(u.signup_date)}</Link></TableCell>
-                      <TableCell className="p-0 text-xs text-slate-500"><Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5">{formatRelative(u.last_active)}</Link></TableCell>
+                      <TableCell className="p-0 text-xs text-slate-500"><Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5 whitespace-nowrap">{formatRelative(u.signup_date)}</Link></TableCell>
+                      <TableCell className="p-0 text-xs text-slate-500"><Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5 whitespace-nowrap">{formatRelative(u.last_active)}</Link></TableCell>
                     </TableRow>
                   );
                 })
