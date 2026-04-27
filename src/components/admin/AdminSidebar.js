@@ -39,12 +39,12 @@ export default function AdminSidebar({ collapsed, setCollapsed }) {
       <div className={`relative ${collapsed ? "px-2" : "px-5"} pt-5 pb-4 border-b border-slate-100 dark:border-slate-800`}>
         {!collapsed ? (
           <div className="flex flex-col items-center w-full">
-            <img src="/admin-logo.png" alt="528 AI" className="w-20 h-20 -my-2 object-contain" />
+            <img src="/admin-logo.png" alt="528 AI" className="w-[140px] h-[140px] -my-3 object-contain" />
             <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 tracking-wide uppercase">Admin Console</p>
           </div>
         ) : (
           <div className="flex justify-center">
-            <img src="/admin-logo.png" alt="528 AI" className="w-12 h-12 -my-2 object-contain" />
+            <img src="/admin-logo.png" alt="528 AI" className="w-14 h-14 -my-2 object-contain" />
           </div>
         )}
         <button
