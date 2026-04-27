@@ -7,10 +7,14 @@ import {
   Line,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   Tooltip as ReTooltip,
   CartesianGrid,
+  Legend,
 } from "recharts";
 import { apiFetch } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/admin/ui/Card";
@@ -22,6 +26,20 @@ const TIER_COLORS = {
   scholar: "#3b82f6",
   elite: "#d97706",
   vip: "#9333ea",
+};
+
+const PLATFORM_COLORS = {
+  ios: "#9333ea",       // purple — matches admin accent
+  android: "#22c55e",   // green
+  web: "#3b82f6",       // blue
+  unknown: "#64748b",   // slate
+};
+
+const PLATFORM_LABELS = {
+  ios: "iOS",
+  android: "Android",
+  web: "Web",
+  unknown: "Unknown",
 };
 
 export default function AdminOverviewPage() {
@@ -69,6 +87,12 @@ export default function AdminOverviewPage() {
     tier: t.tier,
     count: t.count,
     fill: TIER_COLORS[t.tier] || "#94a3b8",
+  }));
+  const platformData = (overview.platforms || []).map((p) => ({
+    platform: PLATFORM_LABELS[p.platform] || p.platform,
+    rawPlatform: p.platform,
+    count: p.count,
+    fill: PLATFORM_COLORS[p.platform] || "#64748b",
   }));
   const totalUsers = overview.users.total;
 
@@ -125,6 +149,49 @@ export default function AdminOverviewPage() {
           />
         </div>
       </div>
+
+      {/* Platform breakdown — pie chart of last_platform across all users */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Platform breakdown</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie
+                data={platformData}
+                dataKey="count"
+                nameKey="platform"
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={95}
+                paddingAngle={2}
+                label={(entry) => `${entry.platform} ${pct(entry.count, totalUsers)}%`}
+                labelLine={false}
+              >
+                {platformData.map((entry, i) => (
+                  <Cell key={i} fill={entry.fill} />
+                ))}
+              </Pie>
+              <ReTooltip
+                contentStyle={{ background: "rgba(15,23,42,0.95)", border: "1px solid rgba(148,163,184,0.3)", borderRadius: 8, color: "white" }}
+                formatter={(value, name) => [`${value.toLocaleString()} users (${pct(value, totalUsers)}%)`, name]}
+              />
+              <Legend
+                verticalAlign="bottom"
+                wrapperStyle={{ fontSize: 12 }}
+                formatter={(v) => <span className="text-slate-700 dark:text-slate-300">{v}</span>}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          {platformData.every((p) => p.rawPlatform === "unknown") && (
+            <p className="text-xs text-slate-400 text-center mt-2">
+              All users still show Unknown — platform tracking activates on each user&apos;s next login.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -121,6 +121,7 @@ export default function AdminUsersPage() {
                 <TableHead>Name</TableHead>
                 <TableHead className="max-w-[220px]">Email</TableHead>
                 <TableHead className="w-20">Tier</TableHead>
+                <TableHead className="text-center w-12" title="Platform">Plat</TableHead>
                 <TableHead className="text-right w-16">Qs</TableHead>
                 <TableHead className="text-right w-14">Acc</TableHead>
                 <TableHead className="w-24">Signed up</TableHead>
@@ -130,13 +131,13 @@ export default function AdminUsersPage() {
             <TableBody>
               {loading && rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center text-slate-400">
+                  <TableCell colSpan={9} className="h-24 text-center text-slate-400">
                     Loading…
                   </TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center text-slate-400">
+                  <TableCell colSpan={9} className="h-24 text-center text-slate-400">
                     No users match these filters.
                   </TableCell>
                 </TableRow>
@@ -163,6 +164,15 @@ export default function AdminUsersPage() {
                         </Link>
                       </TableCell>
                       <TableCell className="p-0"><Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5"><TierBadge tier={u.subscription_tier} /></Link></TableCell>
+                      <TableCell className="p-0 text-center">
+                        <Link
+                          href={`/admin/users/${u.id}`}
+                          className="block w-full px-3 py-2.5"
+                          title={u.last_device || "Unknown — never logged in since device tracking was added"}
+                        >
+                          <PlatformIcon platform={u.last_platform} />
+                        </Link>
+                      </TableCell>
                       <TableCell className="p-0 text-right tabular-nums"><Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5">{(u.total_questions_answered || 0).toLocaleString()}</Link></TableCell>
                       <TableCell className="p-0 text-right tabular-nums"><Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5">{u.total_questions_answered ? `${accuracy}%` : "—"}</Link></TableCell>
                       <TableCell className="p-0 text-xs text-slate-500"><Link href={`/admin/users/${u.id}`} className="block w-full px-3 py-2.5 whitespace-nowrap">{formatRelative(u.signup_date)}</Link></TableCell>
@@ -184,6 +194,31 @@ export default function AdminUsersPage() {
       />
     </div>
   );
+}
+
+// Inline icon for the Platform column. Hover shows the full device
+// string via the parent <Link>'s title attribute.
+function PlatformIcon({ platform }) {
+  const p = (platform || "unknown").toLowerCase();
+  const className = "inline-block w-4 h-4 align-middle";
+  if (p === "ios" || p === "android") {
+    return (
+      <svg className={`${className} text-purple-600 dark:text-purple-400`} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+        <rect x="7" y="2" width="10" height="20" rx="2" />
+        <line x1="11" y1="18" x2="13" y2="18" />
+      </svg>
+    );
+  }
+  if (p === "web") {
+    return (
+      <svg className={`${className} text-blue-600 dark:text-blue-400`} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+        <rect x="3" y="4" width="18" height="12" rx="2" />
+        <line x1="9" y1="20" x2="15" y2="20" />
+        <line x1="12" y1="16" x2="12" y2="20" />
+      </svg>
+    );
+  }
+  return <span className="text-slate-300 dark:text-slate-600 text-sm">—</span>;
 }
 
 function formatRelative(iso) {

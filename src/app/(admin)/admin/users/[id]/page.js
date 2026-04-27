@@ -241,6 +241,21 @@ export default function AdminUserDetailPage({ params }) {
               </Field>
               <Field label="Hours / week">{user.hours_per_week ?? "—"}</Field>
               <Field label="Study streak">{user.study_streak ?? 0} days (longest {user.longest_streak ?? 0})</Field>
+              <Field label="Last platform">
+                {user.last_platform ? (
+                  <span title={user.last_device || ""}>
+                    {user.last_platform === "ios" ? "📱 iOS"
+                      : user.last_platform === "android" ? "📱 Android"
+                      : user.last_platform === "web" ? "💻 Web"
+                      : user.last_platform}
+                    {user.last_device && (
+                      <span className="text-slate-400 text-xs ml-2">· {user.last_device}</span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-slate-400 text-sm">—</span>
+                )}
+              </Field>
               <p className="text-xs text-slate-400 pt-2">More subscription detail (plan, renewal date, MRR contribution) ships in Phase 2.</p>
             </CardContent>
           </Card>
