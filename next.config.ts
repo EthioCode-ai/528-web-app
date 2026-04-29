@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      { source: "/", destination: "/register", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {
