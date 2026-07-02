@@ -75,6 +75,24 @@ export default function StudyPlanPage() {
       setPlan(data);
       setPlanStale(false);
       setSelectedWeek(0);
+      // Fires after backend confirms successful plan creation. Only
+      // canonical shape params — user_tier from local state, weeks
+      // count from response, test_date days-out as a recency-of-
+      // planning signal.
+      const weeks_count = data?.plan_json?.weeks?.length ?? null;
+      const test_date_days_out = user?.test_date
+        ? Math.max(
+            0,
+            Math.round(
+              (new Date(user.test_date).getTime() - Date.now()) / 86400000
+            )
+          )
+        : null;
+      track("study_plan_created", {
+        user_tier: tier,
+        weeks_count,
+        test_date_days_out,
+      });
       alert("Your personalized study plan is ready!");
     } catch (err) {
       const msg = err.message?.toLowerCase() || "";

@@ -114,6 +114,12 @@ export default function FlashcardsPage() {
         method: "POST",
         body: JSON.stringify({ topicId: match.id, count: 10 }),
       });
+      track("flashcard_created", {
+        source: "ai_generated_from_weak_areas",
+        count: res?.count ?? 10,
+        subject: weakTopic.section,
+        topic: weakTopic.topic,
+      });
       alert(`${res.count} flashcards created for "${weakTopic.topic}"`);
       await loadDueCards();
       await loadAllCards();
@@ -129,6 +135,14 @@ export default function FlashcardsPage() {
       await apiFetch("/flashcards", {
         method: "POST",
         body: JSON.stringify({ front: newFront.trim(), back: newBack.trim() }),
+      });
+      // Manual card creation — no subject/topic. newFront/newBack are
+      // NOT passed as event params (raw student-authored text would hit
+      // the sensitive-key denylist via "answer_text" anyway; explicitly
+      // omitted for clarity).
+      track("flashcard_created", {
+        source: "manual",
+        count: 1,
       });
       setNewFront("");
       setNewBack("");

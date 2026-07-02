@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
-import { track } from "@/lib/analytics";
+import { track, identify } from "@/lib/analytics";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -27,6 +27,18 @@ export default function RegisterPage() {
   const [portalReady, setPortalReady] = useState(false);
   useEffect(() => setPortalReady(true), []);
 
+  // Fire onboarding_started once per browser session — not per remount.
+  // Register page can remount during React refresh in dev and on some
+  // navigation patterns; sessionStorage guards against double-firing
+  // to GA4 within the same tab session.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const KEY = "__onboarding_started_fired";
+    if (sessionStorage.getItem(KEY)) return;
+    sessionStorage.setItem(KEY, "1");
+    track("onboarding_started", { source: "signup_form" });
+  }, []);
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
@@ -40,7 +52,15 @@ export default function RegisterPage() {
       });
 
       setAuth(data.token, data.user);
-      track("signup_completed", { userId: data.user?.id });
+      identify(data.user?.id);
+      // Wrapper dual-captures to PostHog as BOTH onboarding_completed
+      // AND signup_completed (via POSTHOG_LEGACY_ALIASES) so existing
+      // PostHog dashboards depending on signup_completed keep working.
+      // GA4 receives only onboarding_completed.
+      track("onboarding_completed", {
+        source: "email",
+        user_tier: "free",
+      });
       router.push("/verify-email");
     } catch (err) {
       if (err.status === 409) {

@@ -67,6 +67,22 @@ export default function StudyGroupPage() {
   const tier = user?.subscription_tier || "free";
   const isElite = tier === "elite" || tier === "vip";
 
+  // Fire power_study_group_opened once per session (revision #6).
+  // Waits for auth hydration (`initialized`) so we don't record
+  // user_tier as "free" while auth state is still loading. Uses
+  // sessionStorage as the dedupe key so remounts within the same
+  // tab session don't double-fire.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!initialized) return;
+    const KEY = "__power_study_group_opened_fired";
+    if (sessionStorage.getItem(KEY)) return;
+    sessionStorage.setItem(KEY, "1");
+    const params = { source: "dashboard" };
+    if (user?.subscription_tier) params.user_tier = user.subscription_tier;
+    track("power_study_group_opened", params);
+  }, [initialized, user?.subscription_tier]);
+
   useEffect(() => {
     if (!initialized) return;
     if (!isElite) {

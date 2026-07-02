@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
+import { track } from "@/lib/analytics";
 import Markdown from "@/components/Markdown";
 
 export default function ScanPage() {
@@ -53,12 +54,22 @@ export default function ScanPage() {
   const analyzeImage = async (base64, mimeType) => {
     setLoading(true);
     setError(null);
+    // Fire scan_started after a valid file is confirmed and AFTER we're
+    // committed to calling the scan API. Per revision #5, source is
+    // "upload" on web (file-input, no device camera/gallery API used).
+    // base64 + mimeType are NOT passed as event params (base64 key
+    // would be dropped by the denylist anyway; explicit omission).
+    const t0 = Date.now();
+    track("document_scan_started", { source: "upload" });
     try {
       const data = await apiFetch("/scan/explain", {
         method: "POST",
         body: JSON.stringify({ image: base64, mimeType }),
       });
       setExplanation(data.explanation);
+      track("document_scan_completed", {
+        duration_seconds: Math.round((Date.now() - t0) / 1000),
+      });
     } catch (err) {
       if (err.status === 403 && (err.body?.error === 'usage_limit' || err.body?.error === 'upgrade_required')) {
         setUsageLimit(err.body);

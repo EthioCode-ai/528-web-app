@@ -119,6 +119,23 @@ const useDiagnosticStore = create((set, get) => ({
       const topic = question.topic || "Unknown";
       const key = `${section}|${topic}`;
 
+      if (!isCorrect) {
+        // Fires once per wrong answer at the moment the backend confirms
+        // isCorrect === false. Distinct from wrong_answer_reviewed
+        // (journal/page.js:69) which fires when a user opens a previously
+        // wrong answer for review. userAnswer + correctAnswer are NOT
+        // passed — the sensitive-key denylist would strip "answer_text"
+        // anyway; explicit omission for clarity.
+        track("wrong_answer_logged", {
+          attempt_id: attemptId,
+          question_id: question?.id,
+          subject: section,
+          topic,
+          subtopic: question?.subtopic,
+          difficulty: question?.difficulty,
+        });
+      }
+
       set((state) => ({
         submitted: true,
         isCorrect,

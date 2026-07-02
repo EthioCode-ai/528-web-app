@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
+import { identify } from "@/lib/analytics";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function LoginPage() {
       });
 
       setAuth(data.token, data.user);
+      identify(data.user?.id);
       router.push("/dashboard");
     } catch (err) {
       setError(err.message || "Login failed. Please try again.");

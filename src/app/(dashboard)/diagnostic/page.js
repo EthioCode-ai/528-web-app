@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import useDiagnosticStore from "@/stores/diagnosticStore";
 import useTutorStore from "@/stores/tutorStore";
 import useAuthStore from "@/stores/authStore";
+import { track } from "@/lib/analytics";
 import DataTable from "@/components/DataTable";
 import dynamic from "next/dynamic";
 import QuestionChart from "@/components/QuestionChart";
@@ -92,6 +93,12 @@ export default function DiagnosticPage() {
   };
 
   const handleOpenTutor = async () => {
+    track("tutor_opened", {
+      source: "diagnostic_wrong_answer",
+      question_id: question?.id,
+      subject: question?.section,
+      topic: question?.topic,
+    });
     setShowTutor(true);
     await startSession(question, selected, question.correct, null);
   };
