@@ -46,8 +46,8 @@ const GA4_MEASUREMENT_ID = "G-YCEJQLJ7K5";
 // Revenue/subscription events are deliberately excluded until the
 // revenue tracking pass ships.
 const GA4_ALLOWED_EVENTS = new Set([
-  "onboarding_started",
-  "onboarding_completed",
+  "signup_started",
+  "signup_completed",
   "diagnostic_started",
   "diagnostic_completed",
   "study_plan_created",
@@ -70,11 +70,12 @@ const GA4_ALLOWED_EVENTS = new Set([
 ]);
 
 // canonical event name -> legacy PostHog event name to ALSO capture.
-// Not a rename — both names fire independently to PostHog. GA4 receives
-// only the canonical name.
-const POSTHOG_LEGACY_ALIASES = {
-  onboarding_completed: "signup_completed",
-};
+// Currently empty — no legacy dual-capture needed. The taxonomy is
+// stable; signup_started / signup_completed map directly to the
+// existing PostHog names and no rename is in flight. Populate this
+// map only if a future canonical rename would otherwise orphan a
+// PostHog dashboard.
+const POSTHOG_LEGACY_ALIASES = {};
 
 // High-cardinality entity IDs — allowed in PostHog (useful for
 // debugging / session investigation) but STRIPPED from GA4 events at
