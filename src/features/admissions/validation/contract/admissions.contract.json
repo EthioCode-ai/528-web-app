@@ -1,6 +1,6 @@
 {
-  "contractVersion": "gate3-2026-07",
-  "policySnapshotVersion": "2026-07-gate3",
+  "contractVersion": "gate3-2026-07.1",
+  "policySnapshotVersion": "2026-07-gate3.1",
   "entities": {
     "applicantProfile": {
       "mvpRequiredKeys": [
@@ -238,7 +238,7 @@
       "phase": null
     },
     {
-      "ruleId": "mcat.attempts.exceeded",
+      "ruleId": "mcat.attempts.lifetime-cap",
       "severity": "blocking",
       "scope": "entity",
       "target": [
@@ -246,7 +246,33 @@
       ],
       "messageTemplate": "AAMC lifetime cap is {lifetimeAttemptCap} attempts. Remove or void an earlier attempt.",
       "metadataTemplate": {
-        "lifetimeAttemptCap": 4
+        "lifetimeAttemptCap": 7
+      },
+      "phase": null
+    },
+    {
+      "ruleId": "mcat.attempts.two-year-cap",
+      "severity": "warning",
+      "scope": "entity",
+      "target": [
+        "applicantMcatAttempts"
+      ],
+      "messageTemplate": "AAMC allows at most {cap} MCAT attempts over two consecutive testing years.",
+      "metadataTemplate": {
+        "cap": 4
+      },
+      "phase": null
+    },
+    {
+      "ruleId": "mcat.attempts.testing-year-cap",
+      "severity": "warning",
+      "scope": "entity",
+      "target": [
+        "applicantMcatAttempts"
+      ],
+      "messageTemplate": "AAMC allows at most {cap} MCAT attempts in a single testing year.",
+      "metadataTemplate": {
+        "cap": 3
       },
       "phase": null
     },

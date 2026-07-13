@@ -17,7 +17,7 @@ export function buildSnapshot() {
     };
   }
   return {
-    contractVersion: "gate3-2026-07",
+    contractVersion: "gate3-2026-07.1",
     policySnapshotVersion: policy.snapshotVersion,
     entities,
     rules: rules.map((r) => ({

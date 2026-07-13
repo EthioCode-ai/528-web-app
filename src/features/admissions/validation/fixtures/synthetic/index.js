@@ -25,7 +25,7 @@ export const validApplicantProfile = {
   applicantLabel: "Synthetic Applicant Alpha",
   applicationCycle: "2026-2027",
   stateResidency: "MA",
-  college: "Northern State University",
+  college: "Synthetic University Alpha",
   major: "Molecular Biology",
   graduationDate: "2025-05",
 };
@@ -77,7 +77,7 @@ export const validActivity = {
   entityVersion: "v1",
   experienceType: "volunteer-medical-clinical",
   title: "Free clinic volunteer",
-  organization: "Northern Community Clinic",
+  organization: "Synthetic Community Clinic Alpha",
   description:
     "Volunteered weekly at a free clinic. Rooming, vitals, patient education. Kept encounters focused, took feedback from residents each shift.",
   isMostMeaningful: false,

@@ -39,14 +39,20 @@ const CLAIM_VERBS = [
 ];
 
 const admissionsPolicySnapshot = Object.freeze({
-  snapshotVersion: "2026-07-gate3",
+  snapshotVersion: "2026-07-gate3.1",
   retrievedAt: "2026-07-13T00:00:00Z",
   notes:
     "Snapshot of externally governed limits at Gate 3. Changes require " +
     "a new snapshotVersion string and a matching entry in " +
-    "src/features/admissions/validation/contract/review-log.md.",
+    "src/features/admissions/validation/contract/review-log.md. " +
+    "gate3.1 corrects the MCAT attempt-cap policy: AAMC's real caps are " +
+    "3 per testing year, 4 over two consecutive testing years, and 7 " +
+    "lifetime. Only the lifetime cap is enforced blocking at this stage; " +
+    "testing-year / two-year window enforcement is deferred until Gate 4 " +
+    "attempt-date-history logic exists.",
   sourceUrls: Object.freeze({
     mcat: "https://students-residents.aamc.org/mcat-scoring-and-score-reports",
+    mcatAttemptLimits: "https://students-residents.aamc.org/taking-mcat-exam/limits-mcat-attempts",
     amcas: "https://students-residents.aamc.org/amcas",
     preview: "https://students-residents.aamc.org/aamc-preview",
   }),
@@ -56,7 +62,9 @@ const admissionsPolicySnapshot = Object.freeze({
     totalMax: 528,
     sectionMin: 118,
     sectionMax: 132,
-    lifetimeAttemptCap: 4,
+    attemptsPerTestingYearCap: 3,
+    attemptsOverTwoConsecutiveYearsCap: 4,
+    lifetimeAttemptCap: 7,
     validityYears: 4,
   }),
   amcas: Object.freeze({
