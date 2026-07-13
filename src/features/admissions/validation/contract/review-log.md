@@ -25,7 +25,7 @@ Contract version format: `gate{N}-{YYYY}-{MM}` (with tie-break tag if needed).
   `mcat.attempts.exceeded` whose message claimed "AAMC lifetime cap
   is 4 attempts." That was factually incorrect. AAMC's actual limits
   (verified against
-  https://students-residents.aamc.org/taking-mcat-exam/limits-mcat-attempts)
+  https://students-residents.aamc.org/register-mcat-exam/publication-chapters/testing-attempt-limits)
   are:
     - **3** attempts per single testing year
     - **4** attempts over two consecutive testing years

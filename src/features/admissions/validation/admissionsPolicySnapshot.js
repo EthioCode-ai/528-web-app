@@ -52,7 +52,7 @@ const admissionsPolicySnapshot = Object.freeze({
     "attempt-date-history logic exists.",
   sourceUrls: Object.freeze({
     mcat: "https://students-residents.aamc.org/mcat-scoring-and-score-reports",
-    mcatAttemptLimits: "https://students-residents.aamc.org/taking-mcat-exam/limits-mcat-attempts",
+    mcatAttemptLimits: "https://students-residents.aamc.org/register-mcat-exam/publication-chapters/testing-attempt-limits",
     amcas: "https://students-residents.aamc.org/amcas",
     preview: "https://students-residents.aamc.org/aamc-preview",
   }),
