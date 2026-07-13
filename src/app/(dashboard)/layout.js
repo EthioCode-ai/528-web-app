@@ -8,6 +8,18 @@ import useThemeStore from "@/stores/themeStore";
 import PeriodicTableModal from "@/components/PeriodicTableModal";
 import TopBar from "@/components/TopBar";
 
+// Admissions Copilot — inserted after Study Plan in the visible list
+// only when the caller is tier ∈ {elite, vip}. Non-Elite users don't
+// see the entry; Elite users without the admissions_copilot entitlement
+// see it but land on /admissions/unavailable via the backend feature-
+// gate detection. Client-side hiding is UX; backend gate is truth.
+const admissionsLink = {
+  href: "/admissions",
+  label: "Admissions",
+  badge: "Elite+",
+  icon: "M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222",
+};
+
 const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" },
   { href: "/diagnostic", label: "Diagnostic", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
@@ -108,7 +120,14 @@ export default function DashboardLayout({ children }) {
 
         {/* Navigation */}
         <nav className={`flex-1 ${collapsed ? "px-2" : "px-3"} py-3 overflow-y-auto`}>
-          {navLinks.map((link) => {
+          {(() => {
+            // Insert Admissions after Study Plan only for Elite / VIP.
+            const showAdmissions = tier === "elite" || tier === "vip";
+            const idx = navLinks.findIndex((l) => l.href === "/study-plan");
+            const visibleLinks = showAdmissions && idx >= 0
+              ? [...navLinks.slice(0, idx + 1), admissionsLink, ...navLinks.slice(idx + 1)]
+              : navLinks;
+            return visibleLinks.map((link) => {
             const isActive =
               pathname === link.href || pathname.startsWith(link.href + "/");
             return (
@@ -116,6 +135,7 @@ export default function DashboardLayout({ children }) {
                 key={link.href}
                 href={link.href}
                 title={collapsed ? link.label : undefined}
+                data-testid={link.href === "/admissions" ? "sidebar-admissions-link" : undefined}
                 className={`flex items-center ${collapsed ? "justify-center" : ""} gap-3 ${collapsed ? "px-0 py-2.5" : "px-3 py-2"} rounded-lg text-[16px] font-medium mb-0.5 transition-colors ${
                   isActive
                     ? "bg-[#1a56db]/10 text-[#1a56db] dark:bg-[#1a56db]/25 dark:text-white"
@@ -131,10 +151,20 @@ export default function DashboardLayout({ children }) {
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d={link.icon} />
                 </svg>
-                {!collapsed && link.label}
+                {!collapsed && (
+                  <span className="inline-flex items-center gap-1.5">
+                    {link.label}
+                    {link.badge ? (
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-600 text-white">
+                        {link.badge}
+                      </span>
+                    ) : null}
+                  </span>
+                )}
               </Link>
             );
-          })}
+            });
+          })()}
 
           {/* Periodic Table — opens a global modal (preserves current page state) */}
           <button
