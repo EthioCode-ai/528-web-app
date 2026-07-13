@@ -1,6 +1,55 @@
-# Admissions Copilot — Gate 4 Fictional End-to-End Flow Plan (v0.1)
+# Admissions Copilot — Gate 4 Fictional End-to-End Flow Plan (v0.2)
 
-**Status:** Draft — awaiting reviewer approval before implementation.
+**Status:** v0.2 — reviewer-corrected pre-implementation draft.
+Two companion pre-implementation docs ship alongside this file:
+`ADMISSIONS_COPILOT_GATE4_CODY_SALVAGE_AUDIT.md` and
+`ADMISSIONS_COPILOT_GATE4_DRAFT_TEMPLATE_SAMPLE.md`.
+
+## v0.2 changelog vs v0.1
+
+Applied per reviewer's Gate 4 v0.2 correction pass:
+
+1. **App Router wording contradiction fixed.** v0.1 opened §1 with
+   "nothing new gets added to the App Router" while later admitting
+   `/admissions/prompts/[promptId]` is new. Corrected to state that
+   **exactly one new App Router route is added** —
+   `/admissions/prompts/[promptId]` — and all other Gate 4 pages
+   reuse the Gate 2 skeleton.
+2. **Health-probe failure modes broadened.** The unavailable state
+   must safely handle a 404 response **and** a network error **and**
+   a timeout. §3.5 now enumerates all three failure modes and the
+   handling.
+3. **Dev-mode flag mechanism locked.** Gate 4 local dev requires
+   `process.env.NODE_ENV === "development"` **AND**
+   `NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED === "1"`. No URL-query
+   trigger. No `sessionStorage` force-enable. No production /
+   Vercel flag enable. Prior alternates are removed.
+4. **Synthetic-name denylist extended.** Added Mayo, NYU, WashU,
+   Vanderbilt, Northwestern, Emory, Baylor, Mount Sinai, Michigan,
+   Washington University, Case Western, Pitt, UVA, UNC, and
+   UT Southwestern to the guard used by
+   `flow.namesAreSynthetic.test.js` (§8.4).
+5. **Acknowledgement UX clarified.** Warning-tier acknowledgements
+   live in `runStore.acknowledgements[]` and are **current-session
+   only**. No `localStorage` persistence. No `sessionStorage`.
+
+## v0.2 companion deliverables
+
+Per reviewer, two additional short docs must be reviewed alongside
+this plan before implementation:
+
+- **`ADMISSIONS_COPILOT_GATE4_CODY_SALVAGE_AUDIT.md`** — classifies
+  eight candidate items from Cody's workbench as
+  `salvage-as-is` / `salvage-after-refactor` / `rewrite` / `discard`.
+- **`ADMISSIONS_COPILOT_GATE4_DRAFT_TEMPLATE_SAMPLE.md`** — one
+  representative deterministic template + its rendered `sentenceIndex`,
+  showing first-person applicant voice, evidence + citation ID
+  linkage, no third-person copied text, no real applicant data, no
+  LLM/provider dependency.
+
+---
+
+**Status header:** Draft — awaiting reviewer approval before implementation.
 **Scope:** One synthetic-only, deterministic, portal-side end-to-end
 flow that exercises the merged Gate 3 validation contract from
 applicant intake through applicant review screen.
@@ -37,9 +86,11 @@ is set — and it stays unset in prod for Gate 4).
 
 ## 1. Portal pages involved
 
-Gate 4 uses the existing `/admissions/*` skeleton from Gate 2 —
-nothing new gets added to the App Router. Pages are enabled only
-when three preconditions hold, in this order:
+Gate 4 adds **exactly one new App Router route** —
+`/admissions/prompts/[promptId]` — as a `page.jsx` under the
+existing `(dashboard)` route group. Every other page participating
+in the Gate 4 flow already exists from the Gate 2 skeleton. Pages
+are enabled only when three preconditions hold, in this order:
 
 1. `NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED = "1"` (frontend flag).
    Remains unset in production. Gate 4 development uses a
@@ -281,16 +332,35 @@ never overlap with Gate 3 messageTemplates.
 
 ### 3.5 Health-probe handling
 
-`AdmissionsGate` (Gate 2) probes `/api/admissions/health`. In Gate
-4 dev sessions:
+`AdmissionsGate` (Gate 2) probes `/api/admissions/health`. The
+probe can resolve one of four ways; all four must degrade safely
+to the same "unavailable" state or the same "ok" state:
 
-- If the backend is running locally, the probe returns 200 or
-  404; either way, Gate 4's synthetic run only starts after the
-  gate resolves to `ok`.
-- If the backend is off, the probe 404s → `AdmissionsGate` redirects
-  to `/admissions/unavailable`. The synthetic run cannot start.
-- In tests, the fetch is mocked to return `{ status: 200 }`. No
-  real network call.
+| Probe result | AdmissionsGate treatment | Gate 4 flow behavior |
+|---|---|---|
+| `200` | `state = ok` → children render | Synthetic run may start |
+| `401` | `router.replace("/login")` | Flow does not start |
+| `403` | `state = no_entitlement` inline | Flow does not start |
+| `404` **or** any other non-200/401/403 status | `router.replace("/admissions/unavailable")` | Flow does not start |
+| Network error (e.g. connection refused, DNS failure) | `.catch()` branch → `router.replace("/admissions/unavailable")` | Flow does not start |
+| Timeout (fetch never resolves before the applicant navigates away) | The `cancelled` flag in `AdmissionsGate`'s useEffect cleanup ignores the late resolution; no state mutation happens after unmount | Flow does not start |
+
+The Gate 2 `AdmissionsGate` implementation already handles the
+first four rows via its `if / else if / else` branches over
+`res.status`, and the fifth row via its `.catch()` handler. Row
+six is handled by the useEffect cleanup `cancelled = true`
+pattern already in place. Gate 4 introduces no new probe
+semantics — it only relies on this "any non-ok result → unavailable"
+contract.
+
+For tests, the health-probe fetch is mocked deterministically at
+the module boundary per case:
+- happy path — `Promise.resolve({ status: 200 })`
+- 404 case — `Promise.resolve({ status: 404 })`
+- network-error case — `Promise.reject(new Error("network fail"))`
+- timeout case — a never-resolving Promise + a
+  `waitFor`-based assertion that the redirect NEVER fires on the
+  unmounted component.
 
 **No `fetch` other than the health probe is issued at any point
 in the Gate 4 flow.** The fetch-guard in `vitest.setup.js`
@@ -402,13 +472,16 @@ verify against the Gate 3 contract.
 - `phase` (idle | loading | interpreting | matching | fitting |
   drafting | checking | interviewing | done | error)
 - Each engine's output, keyed by engine name
+- `acknowledgements[]` — warning acknowledgements for this session
+  only (see §6.3)
 - `errors[]` — any Zod parse failure captured for the UI
 - `startedAt` / `endedAt` — from a `now()` passed in by the
   caller (test-injectable)
 
-**Not persisted.** No `localStorage`. Refreshing the browser drops
-the run. That's intentional for Gate 4 — persistence is Gate 5+
-and requires the backend.
+**Not persisted.** No `localStorage`, no `sessionStorage`.
+Refreshing the browser drops the run and clears every
+acknowledgement. That's intentional for Gate 4 — persistence is
+Gate 5+ and requires the backend.
 
 ### 4.6 What each engine produces
 
@@ -550,8 +623,11 @@ evidence ID or citation ID.
   a "fix in place" affordance that highlights the offending
   sentence in the left pane.
 - Warning rules surface with lower emphasis and an "acknowledge"
-  affordance that logs into `runStore.acknowledgements[]` — not
-  a persistent override, just a per-session note.
+  affordance that pushes into `runStore.acknowledgements[]`.
+  **Current-session only** per reviewer v0.2 — no `localStorage`,
+  no `sessionStorage`. The array clears when the browser tab
+  closes; refreshing the tab drops all acknowledgements. The
+  applicant re-acknowledges each warning if they return.
 - No draft can transition to `applicant-approved` while any
   blocking rule fires. The applicant review screen (§5.8) renders
   the transition button disabled and the panel explicitly.
@@ -643,10 +719,21 @@ One test per broken fixture from §2.9:
   to walk the new Gate 4 fixture files, enforce
   `SYNTHETIC_FIXTURE = true`, and refuse PII patterns.
 - `flow.namesAreSynthetic.test.js` — Regex-check that no fixture
-  string contains a real-sounding institution name. Uses a
-  denylist derived from clearly non-synthetic prefixes (e.g.
-  "Harvard", "Stanford", etc.) — extending the Gate 3.1 rename
-  discipline into a suite-level guard.
+  string contains a real-sounding institution name. Denylist
+  (case-insensitive, word-boundary matched) per reviewer v0.2:
+
+  ```
+  Harvard, Stanford, Yale, MIT, Johns Hopkins, Duke, Columbia,
+  Cornell, UCSF, UCLA, Penn, Mayo, NYU, WashU, Vanderbilt,
+  Northwestern, Emory, Baylor, Mount Sinai, Michigan,
+  Washington University, Case Western, Pitt, UVA, UNC,
+  UT Southwestern
+  ```
+
+  Word-boundary matching prevents false positives (e.g. the
+  applicant's `stateResidency: "MA"` does not match "MA"yo);
+  each entry is anchored with `\b`. Extending the Gate 3.1
+  rename discipline into a suite-level guard.
 
 ### 8.5 No external fetch except the mocked local health check
 
@@ -741,12 +828,34 @@ Gate 4 does not modify `mcat-study-app-backend`. The backend
 mirror named in Gate 3 §4 remains unimplemented until a
 separately approved Gate 5 (or later) backend PR.
 
-### 9.7 Kill switch
+### 9.7 Kill switch — `isCopilotDevModeAllowed()`
+
 Every entry point to the Gate 4 flow — including the "Load
-synthetic run" button — checks a small `isCopilotDevModeAllowed()`
-predicate that returns false in production. If a future change
-accidentally trips the flag on in prod, the button still doesn't
-render.
+synthetic run" button — checks a single predicate:
+
+```js
+export function isCopilotDevModeAllowed() {
+  return (
+    process.env.NODE_ENV === "development" &&
+    process.env.NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED === "1"
+  );
+}
+```
+
+Both conditions must hold. In production (`NODE_ENV !== "development"`)
+this returns `false` even if the frontend flag flipped on. The
+Gate 4 synthetic run cannot render in production under any
+circumstance.
+
+**Explicitly not allowed** (per reviewer v0.2):
+- URL-query overrides such as `?copilot-dev=1`.
+- `sessionStorage` / `localStorage` toggles.
+- `Cookie`-based dev overrides.
+- Enabling `NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED` in production
+  or in Vercel's project env settings.
+
+The predicate is unit-tested with all four env combinations and
+against a stub `process.env` to prove production remains dark.
 
 ---
 
@@ -820,32 +929,15 @@ Plus:
 
 Please confirm or redirect before Gate 4 implementation begins:
 
-1. **Dev-mode flag mechanism** (§1 + §9). Proposed: gate the
-   "Load synthetic run" button behind a
-   `isCopilotDevModeAllowed()` predicate that returns true only
-   in `process.env.NODE_ENV === "development"` **and**
-   `NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED === "1"`. Is that the
-   discipline you want? Alternate options: a separate
-   `NEXT_PUBLIC_ADMISSIONS_COPILOT_DEV_MODE` flag; or a
-   URL-query trigger `?copilot-dev=1` that stays inside
-   session-storage.
-2. **Cody workbench audit scope** (§4.4). Would you like the
-   audit result reported as a separate deliverable before
-   implementation, or bundled into the Gate 4 implementation
-   package?
-3. **Synthetic-name denylist** (§8.4). What real-institution
-   prefixes should the guard block? Proposed initial list:
-   Harvard, Stanford, Yale, MIT, Johns Hopkins, Duke, Columbia,
-   Cornell, UCSF, UCLA, Penn (avoiding false-positives against
-   any of these). Would you like to add / remove entries?
-4. **Draft text style** (§4.2, `draftGeneration`). Deterministic
-   templates only — no LLM. Would you like to see a
-   representative sample of the template shape before
-   implementation, or is the constraint sufficient?
-5. **Warning-tier acknowledgement UX** (§6.3). Should
-   acknowledgements be persistable across page navigation within
-   the session? Proposed: yes, `runStore.acknowledgements[]`
-   holds them until the session ends.
+All prior open questions are resolved per reviewer v0.2:
+
+| # | Question | Resolution |
+|---|---|---|
+| 1 | Dev-mode flag mechanism | Locked: `NODE_ENV === "development"` AND `NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED === "1"`. No URL-query. No sessionStorage. Predicate is `isCopilotDevModeAllowed()` — see §9.7. |
+| 2 | Cody workbench audit reporting | Delivered as separate document `ADMISSIONS_COPILOT_GATE4_CODY_SALVAGE_AUDIT.md` alongside this plan. |
+| 3 | Synthetic-name denylist | Extended list per §8.4 below. Guard is `flow.namesAreSynthetic.test.js`. |
+| 4 | Draft template shape | Sample delivered as separate document `ADMISSIONS_COPILOT_GATE4_DRAFT_TEMPLATE_SAMPLE.md`. |
+| 5 | Warning-tier acknowledgement UX | `runStore.acknowledgements[]` — current session only. No `localStorage`. No `sessionStorage`. State drops on tab close, per §6.3. |
 
 ### 11.4 Timeline (estimate — for planning only)
 
