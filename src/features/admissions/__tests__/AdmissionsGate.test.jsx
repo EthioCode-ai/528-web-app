@@ -10,12 +10,14 @@
 //   - ONLY the health endpoint is called; no other fetches
 
 import { render, screen, waitFor } from "@testing-library/react";
-import { describe, test, expect, vi, beforeEach } from "vitest";
+import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 
 const replaceMock = vi.fn();
+const routerMock = { replace: replaceMock };
+let mockPathname = "/admissions";
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: replaceMock }),
-  usePathname: () => "/admissions",
+  useRouter: () => routerMock,
+  usePathname: () => mockPathname,
 }));
 
 import AdmissionsGate from "../AdmissionsGate";
@@ -29,8 +31,22 @@ function mockHealthResponse(status) {
   });
 }
 
+const ORIGINAL_PORTAL_FLAG = process.env.NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED;
+
 beforeEach(() => {
   replaceMock.mockClear();
+  mockPathname = "/admissions";
+  // Default to portal ENABLED for the backend-gate suite below. The
+  // dedicated "portal flag OFF" describe block unsets it explicitly.
+  process.env.NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED = "1";
+});
+
+afterEach(() => {
+  if (ORIGINAL_PORTAL_FLAG === undefined) {
+    delete process.env.NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED;
+  } else {
+    process.env.NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED = ORIGINAL_PORTAL_FLAG;
+  }
 });
 
 describe("AdmissionsGate", () => {
@@ -107,5 +123,77 @@ describe("AdmissionsGate", () => {
     );
     await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
     expect(String(fetchSpy.mock.calls[0][0])).toMatch(/\/api\/admissions\/health$/);
+  });
+});
+
+describe("AdmissionsGate — frontend portal flag OFF (dark preview)", () => {
+  test("flag unset: /admissions redirects to /admissions/unavailable and never probes", async () => {
+    delete process.env.NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED;
+    const fetchSpy = vi.fn(() => {
+      throw new Error("fetch called with portal flag OFF");
+    });
+    globalThis.fetch = fetchSpy;
+    render(
+      <AdmissionsGate>
+        <div>should not render</div>
+      </AdmissionsGate>
+    );
+    await waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith("/admissions/unavailable")
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test("flag='0': treated as unset — redirects and does not probe", async () => {
+    process.env.NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED = "0";
+    const fetchSpy = vi.fn(() => {
+      throw new Error("fetch called with portal flag='0'");
+    });
+    globalThis.fetch = fetchSpy;
+    render(
+      <AdmissionsGate>
+        <div>should not render</div>
+      </AdmissionsGate>
+    );
+    await waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith("/admissions/unavailable")
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test("flag='true' (not literal '1'): treated as unset — no probe", async () => {
+    process.env.NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED = "true";
+    const fetchSpy = vi.fn(() => {
+      throw new Error("fetch called with portal flag='true'");
+    });
+    globalThis.fetch = fetchSpy;
+    render(
+      <AdmissionsGate>
+        <div>should not render</div>
+      </AdmissionsGate>
+    );
+    await waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith("/admissions/unavailable")
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test("flag unset + pathname=/admissions/unavailable: NO probe, NO redirect", async () => {
+    delete process.env.NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED;
+    mockPathname = "/admissions/unavailable";
+    const fetchSpy = vi.fn(() => {
+      throw new Error("fetch called on unavailable page");
+    });
+    globalThis.fetch = fetchSpy;
+    render(
+      <AdmissionsGate>
+        <div data-testid="unavailable-children">unavailable content</div>
+      </AdmissionsGate>
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("unavailable-children")).toBeInTheDocument()
+    );
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

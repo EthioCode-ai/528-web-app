@@ -2,6 +2,7 @@
 // against unmocked network calls escaping into the test process.
 
 import '@testing-library/jest-dom/vitest';
+import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 
 // Safety net: every test that uses fetch MUST mock it explicitly.
@@ -17,5 +18,5 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  cleanup();
 });

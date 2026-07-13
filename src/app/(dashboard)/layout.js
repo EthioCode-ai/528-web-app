@@ -121,8 +121,14 @@ export default function DashboardLayout({ children }) {
         {/* Navigation */}
         <nav className={`flex-1 ${collapsed ? "px-2" : "px-3"} py-3 overflow-y-auto`}>
           {(() => {
-            // Insert Admissions after Study Plan only for Elite / VIP.
-            const showAdmissions = tier === "elite" || tier === "vip";
+            // Insert Admissions after Study Plan only when BOTH gates pass:
+            //   (a) the frontend portal preview flag is set — this keeps the
+            //       surface dark for every user until we intentionally reveal it
+            //   (b) the caller is Elite or VIP tier
+            // The backend requireEntitlement('admissions_copilot') gate is the
+            // authoritative access check; these two are cosmetic.
+            const portalEnabled = process.env.NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED === "1";
+            const showAdmissions = portalEnabled && (tier === "elite" || tier === "vip");
             const idx = navLinks.findIndex((l) => l.href === "/study-plan");
             const visibleLinks = showAdmissions && idx >= 0
               ? [...navLinks.slice(0, idx + 1), admissionsLink, ...navLinks.slice(idx + 1)]

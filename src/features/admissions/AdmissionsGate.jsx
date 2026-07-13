@@ -2,25 +2,35 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { isAdmissionsPortalEnabled } from "./portalFlag";
 
-// Backend feature-gate detection for Admissions Copilot.
+// Two-layer gate for Admissions Copilot.
 //
-// On mount, probes GET /api/admissions/health:
-//   200 → feature is available; render children
-//   404 → backend router not mounted (ADMISSIONS_COPILOT_ENABLED unset
-//         or backend at rest); redirect to /admissions/unavailable
-//   401 → auth expired; redirect to /login (matches existing app flow)
-//   403 → caller lacks entitlement; render an inline unavailable
-//         state so the caller can request access without losing
-//         their spot in the sidebar
-//   other → treat as unavailable to fail closed
+// Layer 1 — frontend portal flag (NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED)
+//   When unset, the portal preview is DARK for everyone, including
+//   elite/vip. No /api/admissions/health probe happens — the gate
+//   short-circuits and redirects direct navigation to
+//   /admissions/unavailable. This lets us merge the skeleton to main
+//   without exposing the surface until we explicitly enable it.
+//
+// Layer 2 — backend feature-gate detection (only runs when portal flag
+// is set)
+//   On mount, probes GET /api/admissions/health:
+//     200 → feature is available; render children
+//     404 → backend router not mounted (ADMISSIONS_COPILOT_ENABLED
+//           unset or backend at rest); redirect to /admissions/unavailable
+//     401 → auth expired; redirect to /login (matches existing app flow)
+//     403 → caller lacks entitlement; render an inline unavailable
+//           state so the caller can request access without losing
+//           their spot in the sidebar
+//     other → treat as unavailable to fail closed
 //
 // The gate NEVER assumes the entitlement based on tier. Tier is only
 // used by the sidebar to hide the entry cosmetically. This gate is
 // the truth on whether the surface can render.
 //
 // The health probe is the ONLY network call this gate is permitted to
-// make in Gate 2. No agent calls, no other endpoints.
+// make in Gate 2, and it only fires when the portal flag is set.
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -37,9 +47,17 @@ export default function AdmissionsGate({ children }) {
 
   useEffect(() => {
     // Never re-probe on the unavailable page itself — that page must
-    // render even when the backend is off.
+    // render even when the backend is off OR when the portal flag is
+    // unset.
     if (pathname === "/admissions/unavailable") {
       setState({ status: "ok" });
+      return;
+    }
+
+    // Layer 1: portal flag. When unset, no probe fires — we send the
+    // caller straight to /admissions/unavailable.
+    if (!isAdmissionsPortalEnabled()) {
+      router.replace("/admissions/unavailable");
       return;
     }
 
