@@ -1,9 +1,18 @@
-# Admissions Copilot — Gate 5 UAT Transition Plan (v0.3)
+# Admissions Copilot — Gate 5 UAT Transition Plan (v0.4)
 
-**Status:** v0.3 — reviewer-corrected pre-implementation draft.
-The v0.2 changelog block below remains as the authoritative record
-of what changed since v0.1; v0.3 corrections are called out
-immediately after it in the "v0.3 changelog" section.
+**Status:** v0.4 — approved-naming lock-in. The v0.3 corrections
+(§9.1 CI isolation, §4.6/§9.7/§10.2 flag-off, §4.5/§9.2 DELETE
+removal, §13.4 timeline) carry forward unchanged. The v0.2
+corrections carry forward beneath them. v0.4 does not change any
+plan behavior — it only records the reviewer-approved
+identifiers so the on-disk source of truth matches the
+implementation-preflight decisions.
+
+**Implementation is still blocked** — see §3.1 — until the Render
+UAT DB `mcat-admissions-uat` / `mcat_admissions_uat` is
+actually created (or otherwise confirmed by the account owner)
+AND the reviewer-approved secret / env-var naming below is
+acknowledged in the deployment plan of record.
 **Scope:** Plan the transition from Gate 4's fictional in-memory
 portal flow to a controlled **UAT-ready** Admissions Copilot
 architecture: authenticated user-owned records, a Render
@@ -26,6 +35,48 @@ touched.
 
 This is a **planning gate**. Nothing is implemented until the
 reviewer signs off on this plan.
+
+## v0.4 changelog vs v0.3
+
+Approved-naming lock-in from the Gate 5 preflight reply. No
+behavior changes; the names below are recorded here so the plan
+document is the single source of truth.
+
+1. **UAT DB identifier locked** — §3.1 now names the
+   Render UAT DB as **service `mcat-admissions-uat`** with
+   database name **`mcat_admissions_uat`**. Implementation
+   remains blocked until this DB is actually created / confirmed
+   by the account owner (I do not have Render access).
+2. **Test DB identifier locked** — §3.1 now names the existing
+   Render test DB as **service `mcat-admissions-test`** with
+   database name **`mcat_admissions_test`**. Existence must be
+   verified in Render before implementation; no substitution is
+   permitted.
+3. **GitHub Actions secret names scoped** — §3.2 records the
+   four scoped secret names in `mcat-study-app-backend`:
+   `ADMISSIONS_TEST_DATABASE_URL`,
+   `ADMISSIONS_TEST_MIGRATION_ROLE_URL`,
+   `ADMISSIONS_UAT_DATABASE_URL`,
+   `ADMISSIONS_UAT_MIGRATION_ROLE_URL`. A single generic
+   `ADMISSIONS_MIGRATION_ROLE_URL` GitHub secret is explicitly
+   **not used** — ambiguity between test and UAT was flagged as
+   unacceptable. Portal repo (`528-web-app`) has **no** GH
+   Actions DB secrets in Gate 5.
+4. **Runtime-vs-migration env-var separation locked** — §3.2 /
+   §10.2 record the discipline: the long-running backend
+   service holds ONLY the app-role `DATABASE_URL`; the migration
+   role's URL lives ONLY in the migration job (or one-off
+   migration context). `ADMISSIONS_MIGRATION_ROLE_URL` as an
+   env var name is permitted **only inside the UAT migration
+   job / one-off migration context** if Render's dashboard
+   requires that name there — never in a runtime backend.
+5. **Portal Vercel env vars locked** — §10.1 / §10.2 record
+   the exact names: `NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED`
+   (unchanged) and `NEXT_PUBLIC_ADMISSIONS_API_BASE` for the
+   UAT backend base URL. Both remain **unset** in Vercel
+   production.
+
+All v0.3 and v0.2 corrections carry forward unchanged.
 
 ## v0.3 changelog vs v0.2
 
@@ -267,28 +318,33 @@ existing 528 AI tables.
 
 ### 3.1 Requirement — no other database engines
 
-- **UAT database — MUST BE CONFIRMED OR PROVISIONED BEFORE
-  IMPLEMENTATION.** v0.1 incorrectly assumed a dedicated Render
-  PostgreSQL UAT instance already existed. Only the Render
-  **test** DB was provisioned in the prior confirmation. Before
-  any Gate 5 migration file is written, the reviewer must:
-  - point Gate 5 at an existing Render PostgreSQL UAT DB by
-    name (e.g. `528ai-uat`), **or**
-  - approve provisioning a dedicated one and confirm its
-    identifier.
-  Gate 5 implementation halts at the migration-writing step
-  until this is resolved.
-- **Test database:** the existing dedicated Render PostgreSQL
-  **test** instance used by CI. Gate 5 CI does **not** create
-  branch-scoped `pr_<n>` schemas. Instead it resets the shared
-  `admissions` schema on the same DB at the start of each CI
-  run and rolls it back at the end. See §3.3 for the isolation
-  plan.
-- **CI database:** same as test above. Single Render test
-  instance, one `admissions` schema per run, serialized across
-  runs at the CI level so concurrent PRs do not race the reset.
-  A CI concurrency group (`admissions-schema`) restricts the
-  Render test DB to one active run at a time.
+- **UAT database — reviewer-approved identifier locked at v0.4:**
+  - Render service / display name: **`mcat-admissions-uat`**
+  - Database name: **`mcat_admissions_uat`**
+  - **Blocker:** Gate 5 implementation halts at the
+    migration-writing step until this DB is actually created
+    (or otherwise confirmed by the account owner) in the Render
+    dashboard. I do not have Render access; provisioning
+    remains the reviewer's action. Once the DB exists, the
+    reviewer confirms in chat and implementation may begin.
+- **Test database — reviewer-confirmed identifier locked at v0.4:**
+  - Render service / display name: **`mcat-admissions-test`**
+  - Database name: **`mcat_admissions_test`**
+  - **Verification requirement:** existence must be
+    re-verified in the Render dashboard before the first CI run
+    references it. No substitution is permitted — if the DB is
+    missing or has been renamed, halt and confirm with the
+    reviewer.
+  - Gate 5 CI does **not** create branch-scoped `pr_<n>`
+    schemas. Instead it resets the shared `admissions` schema
+    on this DB at the start of each CI run and rolls it back at
+    the end. See §3.3 for the isolation plan.
+- **CI database:** same as test above (`mcat-admissions-test` /
+  `mcat_admissions_test`). Single Render test instance, one
+  `admissions` schema per run, serialized across runs at the
+  CI level so concurrent PRs do not race the reset. A CI
+  concurrency group (`admissions-schema`) restricts the Render
+  test DB to one active run at a time.
 - **Explicit non-options:**
   - No Docker Postgres in CI.
   - No local Postgres in developer machines for CI equivalency.
@@ -296,13 +352,46 @@ existing 528 AI tables.
     at the JS layer and don't touch a DB; anything DB-shaped uses
     Render).
 
-### 3.2 Secret handling
+### 3.2 Secret handling — approved-naming lock-in (v0.4)
+
+**GitHub Actions repository secrets — backend repo
+`mcat-study-app-backend`:**
+
+| Secret name | Purpose | Used by |
+|---|---|---|
+| `ADMISSIONS_TEST_DATABASE_URL` | Test DB **app-role** runtime connection URL (points at `mcat_admissions_test`) | CI test runner (backend `DATABASE_URL` at test time) |
+| `ADMISSIONS_TEST_MIGRATION_ROLE_URL` | Test DB **migration-role** connection URL | CI migration setup + teardown steps only |
+| `ADMISSIONS_UAT_DATABASE_URL` | UAT DB **app-role** runtime URL (points at `mcat_admissions_uat`) | UAT deploy / UAT-only workflows — **never production** |
+| `ADMISSIONS_UAT_MIGRATION_ROLE_URL` | UAT DB **migration-role** URL | UAT migration job / workflow only |
+
+- **A single generic `ADMISSIONS_MIGRATION_ROLE_URL` GitHub
+  secret is not used** — it is ambiguous between test and UAT
+  and the reviewer explicitly rejected that shape.
+- **Portal repo `528-web-app` has no GH Actions DB secrets in
+  Gate 5.** The persistence adapter reads only from
+  browser-visible `NEXT_PUBLIC_*` env vars.
+
+**Runtime-vs-migration env-var separation (locked at v0.4):**
+
+- The long-running backend service holds **only** the app-role
+  `DATABASE_URL`. It does not carry a migration-role URL under
+  any name.
+- The migration role's URL lives **only** in the migration job
+  (or one-off migration context).
+- `ADMISSIONS_MIGRATION_ROLE_URL` is permitted as an env-var
+  name **only inside the UAT migration job / one-off migration
+  context**, and only if Render's dashboard requires that name
+  in a job's env at all. It is **never** placed in a runtime
+  backend service.
+
+**General discipline (unchanged from v0.1):**
 
 - Database URLs and credentials live only in Render's env vars
-  and in GitHub Actions **repository secrets**. Never in
-  `.env.example`, never in code, never in logs.
-- The backend refuses to boot if the URL env var is present but
-  unparseable — fail-loud, not fail-silent.
+  and in GitHub Actions repository secrets. Never in
+  `.env.example`, never in code, never in logs, never in
+  screenshots, never in chat.
+- The backend refuses to boot if the `DATABASE_URL` env var is
+  present but unparseable — fail-loud, not fail-silent.
 - Error paths that surface DB errors to logs strip the
   connection URL before emitting; a helper
   `redactDbErrorForLog(err)` wraps every catch block that logs a
@@ -311,6 +400,9 @@ existing 528 AI tables.
   `PGPASSWORD` env var (or the URL directly) but never print it.
 - The Gate 3 `admissions.contract.json` snapshot is the only
   cross-repo shared artifact; it contains no secrets.
+- Pre-commit / CI grep for `postgresql://`, `postgres://`,
+  `pg://`, `PGPASSWORD=`, `PGUSER=` in staged content; commits
+  fail if any hit.
 
 ### 3.3 Schema isolation — single choice (v0.2)
 
@@ -979,30 +1071,57 @@ check verified by §9.7a below.
 
 ## 10. Feature flag plan
 
-### 10.1 Frontend flag
+### 10.1 Frontend (Vercel) env vars — locked at v0.4
 
 - `NEXT_PUBLIC_ADMISSIONS_PORTAL_ENABLED` — same variable, same
   discipline as Gate 2 / 3 / 4.
-- **Production:** unset.
-- **UAT:** `"1"` in the UAT Vercel env.
-- **CI:** `"1"` only for the test suite; never baked into a
-  production build.
+  - **UAT (Vercel UAT env):** `"1"`.
+  - **Production (Vercel prod env):** unset.
+  - **CI:** `"1"` only inside the test-runner env; never baked
+    into a production build.
+- `NEXT_PUBLIC_ADMISSIONS_API_BASE` — the UAT backend base URL
+  used by the portal persistence adapter.
+  - **UAT (Vercel UAT env):** points at the UAT backend service
+    (identifier confirmed by the reviewer at UAT deploy time).
+  - **Production (Vercel prod env):** unchanged from current
+    configuration (unset unless already set for other reasons;
+    Gate 5 does not add or change this in prod).
+  - **CI:** points at the loopback health probe or a stub URL;
+    the runGuard from Gate 4.1 continues to enforce that only
+    `/api/admissions/health` GETs may fire during tests.
 
-### 10.2 Backend flag
+### 10.2 Backend (Render) env vars — locked at v0.4
 
 - `ADMISSIONS_COPILOT_ENABLED` — same variable, same discipline
   as Gate 2 §4.
-- **Production:** unset. The entire `/api/admissions` router is
-  **not mounted** at boot; requests to any `/api/admissions/*`
-  path (including `GET /health`) hit the Express global 404
-  handler with no route-specific body. This matches Gate 2's
-  existing behavior. **No `403` is emitted in production for
-  admissions paths** — 403 is only meaningful inside mounted
-  UAT/test routes.
-- **UAT:** `"1"` in the UAT Render env. Router mounted; health
-  returns `200`; mounted routes enforce auth / entitlement /
-  ownership and emit `401` / `403` per §4.3.
-- **CI:** `"1"` only inside the test runner's env.
+  - **Production (Render prod service):** unset. The entire
+    `/api/admissions` router is **not mounted** at boot;
+    requests to any `/api/admissions/*` path (including
+    `GET /health`) hit the Express global 404 handler with no
+    route-specific body. This matches Gate 2's existing
+    behavior. **No `403` is emitted in production for
+    admissions paths** — 403 is only meaningful inside mounted
+    UAT/test routes.
+  - **UAT (Render UAT service `mcat-admissions-uat` client):**
+    `"1"`. Router mounted; health returns `200`; mounted routes
+    enforce auth / entitlement / ownership and emit `401` /
+    `403` per §4.3.
+  - **CI:** `"1"` only inside the test runner's env.
+- `DATABASE_URL` — per-env value:
+  - **Production (Render prod service):** unchanged from
+    current configuration. Gate 5 does not touch prod
+    `DATABASE_URL`.
+  - **UAT (Render UAT service):** points at the UAT DB
+    `mcat_admissions_uat` on `mcat-admissions-uat`. **App-role
+    only** — never the migration-role URL (see §3.2).
+  - **CI (test runner):** sourced from the GH Actions secret
+    `ADMISSIONS_TEST_DATABASE_URL`.
+- `ADMISSIONS_MIGRATION_ROLE_URL` — permitted as an env-var
+  name **only inside the UAT migration job / one-off migration
+  context** if Render's dashboard requires that name in that
+  job's env. **Never** placed in the long-running backend
+  runtime service in any environment. In production this
+  env var name does not exist at all.
 
 ### 10.3 UAT-only enablement
 
