@@ -1,5 +1,6 @@
 import PageHeader from "@/features/admissions/PageHeader";
 import EmptyState from "@/features/admissions/EmptyState";
+import { LoadSyntheticRunButton } from "@/features/admissions/copilot/ui/LoadSyntheticRunButton";
 
 export default function AdmissionsOverviewPage() {
   return (
@@ -9,6 +10,7 @@ export default function AdmissionsOverviewPage() {
         subtitle="Preview build — end-to-end flows are not yet connected."
       />
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+        <LoadSyntheticRunButton />
         <EmptyState
           testId="empty-overview"
           title="Your admissions cycle starts here"

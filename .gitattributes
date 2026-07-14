@@ -1,0 +1,4 @@
+# The admissions.contract.json snapshot is byte-frozen (SHA-256 pinned in
+# expectedSnapshotHash.js). It MUST keep LF line endings on every OS or
+# the freeze test fails.
+src/features/admissions/validation/contract/admissions.contract.json text eol=lf
