@@ -342,7 +342,7 @@ existing 528 AI tables.
 | Env | Portal flag | Backend flag | DB target |
 |---|---|---|---|
 | Local dev | dev-mode gate only (Gate 4) — no backend calls | unset | none (fixtures only) |
-| CI | test-only | test-only, on for test-runners | Render test DB (isolated per branch run) |
+| CI | test-only | test-only, on for test-runners | Render test DB (serialized per CI run via `admissions-schema` concurrency group) |
 | UAT | `"1"` | `"1"` | Render UAT DB |
 | Production | **unset** | **unset** | (Render prod DB — Admissions tables not touched) |
 
