@@ -1,16 +1,18 @@
-# Admissions Copilot — Gate 5 UAT Transition Plan (v0.1)
+# Admissions Copilot — Gate 5 UAT Transition Plan (v0.2)
 
-**Status:** Draft — awaiting reviewer approval before implementation.
+**Status:** v0.2 — reviewer-corrected pre-implementation draft.
 **Scope:** Plan the transition from Gate 4's fictional in-memory
 portal flow to a controlled **UAT-ready** Admissions Copilot
-architecture: authenticated user-owned records, Render PostgreSQL
-UAT schema, backend API contracts, auditability, controlled
+architecture: authenticated user-owned records, a Render
+PostgreSQL UAT schema (to be confirmed/provisioned — see §3), a
+narrowed backend API surface, auditability, controlled
 persistence, and the readiness criteria that must precede any real
 applicant trial.
 **Non-scope:** Production launch; real applicant trial;
 external providers / LLMs; document upload; billing / Stripe;
 mobile; Growth Engine; cleanup of the pre-existing production
-Admissions data pollution (separate approval required).
+`admissions.documents` test-shaped row (separate approval required
+— see §5.5 for the correct description).
 
 Gate 4 shipped a fully deterministic, in-memory portal flow on
 `main` at commit `a8e77cc`. Gate 5 replaces the in-memory
@@ -21,6 +23,60 @@ touched.
 
 This is a **planning gate**. Nothing is implemented until the
 reviewer signs off on this plan.
+
+## v0.2 changelog vs v0.1
+
+Applied per reviewer's Gate 5 v0.2 correction pass:
+
+1. **Endpoint scope narrowed.** The 40+-endpoint list in v0.1 §4.1
+   is replaced with the approved Gate 5 MVP surface: `GET /health`,
+   profile, academic metrics, MCAT / PREview, activities /
+   experience hours, evidence, schools, prompts, prompt
+   interpretation, drafts + draft versions, doNotUseTopics,
+   deterministic `POST /run/copilot`, audit append.
+   Interview-prep persistence, broad school-research CRUD, broad
+   citation CRUD, delete-all / export / reconcile, admin/reviewer
+   surfaces, document upload, and external providers are all
+   deferred to Gate 6+.
+2. **UAT DB assumption corrected.** v0.1 said the UAT Render
+   PostgreSQL DB was "already provisioned." That is not true.
+   Only a dedicated Render **test** DB exists today. §3.1 now
+   says a UAT Render PostgreSQL DB **must be confirmed /
+   provisioned** before implementation begins, with the DB
+   identifier named at that time.
+3. **Backend flag-off behavior aligned with existing gate.**
+   When `ADMISSIONS_COPILOT_ENABLED` is unset, the entire
+   `/api/admissions/*` router is **unmounted** — routes do not
+   exist in the running process. Requests hit the Express
+   404 handler. `403` is used only inside mounted UAT/test
+   contexts for auth or entitlement failures. The prior
+   "production returns 403 on /me/profile" wording is removed.
+4. **CI schema isolation resolved.** v0.1 implied both a
+   `CREATE SCHEMA admissions` seed migration AND branch-scoped
+   `pr_<n>` schemas. Choosing: **dedicated Render test DB, reset
+   per CI run, using the `admissions` schema.** Branch-scoped
+   ad-hoc schemas are dropped from the plan.
+5. **`admissions.draft_versions` added to migrations.** Per
+   reviewer direction, versioning ships in Gate 5 with a
+   dedicated table. See §5.1.
+6. **UAT draft-version retention bounded.** Latest 50 versions
+   per `(user_id, prompt_id)` in UAT. See §6.3.
+7. **MCAT attempt caps stay at Gate 3 / API layer.** DB triggers
+   for the 3/4/7 attempt-window checks are removed from the
+   plan. Database constraints in Gate 5 are structural only
+   (NOT NULL, FK, UNIQUE, CHECK on simple ranges).
+8. **GitHub removed from backend test network allowlist.**
+   Since Gate 5 vendors the contract JSON, backend tests do
+   not need GitHub network access. Only same-host Render DB
+   and same-service loopback URLs are permitted for tests.
+9. **Production cleanup wording corrected.** The pre-existing
+   production row is a **test-shaped `admissions.documents` row
+   linked to a legitimate `user_id`, with local-stub storage,
+   pending verification, and no real bytes** — not an orphan.
+   Cleanup remains deferred and separately approved (§5.5).
+10. **§13.3 open questions resolved.** All eight prior open
+    questions are marked resolved per reviewer v0.2. §13.3 now
+    holds a decisions table instead of a questions list.
 
 ---
 
@@ -163,19 +219,28 @@ existing 528 AI tables.
 
 ### 3.1 Requirement — no other database engines
 
-- **UAT database:** the existing dedicated Render PostgreSQL UAT
-  instance (already provisioned earlier in the project — see the
-  prior confirmation in the project history). Gate 5 migrations
-  land in a new `admissions` schema inside this instance.
+- **UAT database — MUST BE CONFIRMED OR PROVISIONED BEFORE
+  IMPLEMENTATION.** v0.1 incorrectly assumed a dedicated Render
+  PostgreSQL UAT instance already existed. Only the Render
+  **test** DB was provisioned in the prior confirmation. Before
+  any Gate 5 migration file is written, the reviewer must:
+  - point Gate 5 at an existing Render PostgreSQL UAT DB by
+    name (e.g. `528ai-uat`), **or**
+  - approve provisioning a dedicated one and confirm its
+    identifier.
+  Gate 5 implementation halts at the migration-writing step
+  until this is resolved.
 - **Test database:** the existing dedicated Render PostgreSQL
-  **test** instance used by CI (also already provisioned). Gate 5
-  CI adds a run-per-PR shape that spins the same migrations up,
-  runs API contract tests, and rolls the schema back.
-- **CI database:** shared with the test database above (single
-  Render test instance, isolated schemas per branch run so
-  concurrent PRs do not race). If race isolation proves
-  insufficient at any point, the plan calls for a dedicated
-  `admissions_ci` instance rather than local containers.
+  **test** instance used by CI. Gate 5 CI does **not** create
+  branch-scoped `pr_<n>` schemas. Instead it resets the shared
+  `admissions` schema on the same DB at the start of each CI
+  run and rolls it back at the end. See §3.3 for the isolation
+  plan.
+- **CI database:** same as test above. Single Render test
+  instance, one `admissions` schema per run, serialized across
+  runs at the CI level so concurrent PRs do not race the reset.
+  A CI concurrency group (`admissions-schema`) restricts the
+  Render test DB to one active run at a time.
 - **Explicit non-options:**
   - No Docker Postgres in CI.
   - No local Postgres in developer machines for CI equivalency.
@@ -199,14 +264,30 @@ existing 528 AI tables.
 - The Gate 3 `admissions.contract.json` snapshot is the only
   cross-repo shared artifact; it contains no secrets.
 
-### 3.3 Schema isolation
+### 3.3 Schema isolation — single choice (v0.2)
 
 - All Gate 5 tables live under the Postgres `admissions` schema.
-- The migration that creates the schema is the first Gate 5
-  migration and is idempotent (`CREATE SCHEMA IF NOT EXISTS`).
+- The first Gate 5 migration is idempotent
+  (`CREATE SCHEMA IF NOT EXISTS admissions`).
+- **CI isolation model:** dedicated Render test DB, reset per run.
+  Every CI run:
+  1. Acquires the `admissions-schema` GitHub Actions concurrency
+     group (only one Gate-5 CI run active at a time).
+  2. `DROP SCHEMA admissions CASCADE; CREATE SCHEMA admissions;`
+     against the Render test DB.
+  3. Runs the ordered migrations up.
+  4. Runs the contract / integration tests.
+  5. Runs the migrations down as a rollback smoke test.
+  6. Releases the concurrency group.
+  Branch-scoped `pr_<n>` schemas are **not** used. Every test
+  operates against the same `admissions` schema; the isolation
+  guarantee comes from the concurrency group, not from schema
+  naming.
 - The backend connection role is granted `USAGE` on the
   `admissions` schema and `SELECT, INSERT, UPDATE, DELETE` on
   its tables; no `DROP` privileges outside the migration role.
+- The migration role has `CREATE, DROP` on the `admissions`
+  schema only — never on `public` or any other schema.
 
 ### 3.4 Environment matrix
 
@@ -221,9 +302,14 @@ existing 528 AI tables.
 
 ## 4. Backend API contract plan
 
-### 4.1 Endpoint list (from Gate 3 §4.2, now scheduled)
+### 4.1 Endpoint list — Gate 5 MVP (v0.2)
 
-Base path: `/api/admissions`.
+Base path: `/api/admissions`. Narrowed per reviewer v0.2 to
+the surface the Gate 4 fictional flow actually touches, plus the
+`POST /run/copilot` runner and append-only audit. Anything not on
+this table is **deferred** to Gate 6+ and lists in §4.1.2.
+
+#### 4.1.1 Gate 5 MVP endpoints
 
 | Method + Path | Purpose | Auth | Entitlement |
 |---|---|---|---|
@@ -237,46 +323,66 @@ Base path: `/api/admissions`.
 | `GET /me/mcat` | List MCAT attempts | required | required |
 | `POST /me/mcat` | Add MCAT attempt | required | required |
 | `PUT /me/mcat/:id` | Update MCAT attempt | required | required |
-| `DELETE /me/mcat/:id` | Remove MCAT attempt | required | required |
 | `GET /me/preview` | List PREview scores | required | required |
 | `POST /me/preview` | Add PREview score | required | required |
-| `GET /me/activities` | List activities | required | required |
+| `GET /me/activities` | List activities + folded experience hours | required | required |
 | `POST /me/activities` | Add activity | required | required |
 | `PUT /me/activities/:id` | Update activity | required | required |
-| `DELETE /me/activities/:id` | Remove activity | required | required |
 | `GET /me/evidence` | List evidence items | required | required |
 | `POST /me/evidence` | Add evidence item | required | required |
 | `PUT /me/evidence/:id` | Update evidence item | required | required |
-| `DELETE /me/evidence/:id` | Remove evidence item | required | required |
 | `GET /me/schools` | List school list | required | required |
 | `POST /me/schools` | Add school | required | required |
 | `PUT /me/schools/:id` | Update school | required | required |
-| `DELETE /me/schools/:id` | Remove school | required | required |
-| `GET /me/school-research/:schoolId` | Read school research | required | required |
-| `PUT /me/school-research/:schoolId` | Update school research | required | required |
-| `GET /me/citations` | List citations | required | required |
-| `POST /me/citations` | Add citation | required | required |
-| `PUT /me/citations/:id` | Update citation | required | required |
-| `DELETE /me/citations/:id` | Remove citation | required | required |
 | `GET /me/prompts` | List secondary prompts | required | required |
 | `POST /me/prompts` | Add prompt | required | required |
 | `PUT /me/prompts/:id` | Update prompt | required | required |
-| `DELETE /me/prompts/:id` | Remove prompt | required | required |
 | `GET /me/interpretations/:promptId` | Read prompt interpretation | required | required |
 | `PUT /me/interpretations/:promptId` | Save prompt interpretation | required | required |
-| `GET /me/drafts` | List drafts | required | required |
+| `GET /me/drafts` | List drafts (headers only) | required | required |
+| `GET /me/drafts/:id` | Read a draft (current version) | required | required |
 | `POST /me/drafts` | Create draft (accepts agent output from Gate 4 engines) | required | required |
-| `PUT /me/drafts/:id` | Update draft | required | required |
-| `POST /me/drafts/:id/transition` | Transition draft status (guarded by Gate 3 rules) | required | required |
-| `GET /me/interview-prep/:schoolId` | Read interview-prep inputs | required | required |
-| `PUT /me/interview-prep/:schoolId` | Save interview-prep inputs | required | required |
+| `PUT /me/drafts/:id` | Update draft → writes new draft_versions row | required | required |
+| `GET /me/drafts/:id/versions` | List draft versions for a draft (paginated) | required | required |
+| `GET /me/drafts/:id/versions/:versionNumber` | Read a specific historical version | required | required |
 | `GET /me/do-not-use-topics` | List doNotUseTopics | required | required |
 | `POST /me/do-not-use-topics` | Add doNotUseTopic | required | required |
 | `PUT /me/do-not-use-topics/:id` | Update doNotUseTopic | required | required |
-| `DELETE /me/do-not-use-topics/:id` | Remove doNotUseTopic | required | required |
-| `GET /me/audit` | Read own audit log | required | required |
-| `POST /run/school-fit` | Trigger school-fit run (deterministic; no LLM) | required | required |
-| `POST /run/copilot` | Trigger the Gate 4 orchestrator on persisted records | required | required |
+| `POST /run/copilot` | Deterministic Gate 4 orchestrator on persisted records | required | required |
+| `POST /me/audit` | Append-only audit event (server-side helper — see §6.4) | required | required |
+
+Total: **37 endpoints**, of which only ~29 are user-facing HTTP
+surface (the audit-append is invoked from the backend itself in
+most flows).
+
+#### 4.1.2 Deferred to Gate 6+
+
+- **Delete endpoints on user records** — `DELETE /me/mcat/:id`,
+  `DELETE /me/activities/:id`, `DELETE /me/evidence/:id`,
+  `DELETE /me/schools/:id`, `DELETE /me/prompts/:id`,
+  `DELETE /me/do-not-use-topics/:id`. Deletion in Gate 5 is
+  runbook-scripted only. `DELETE /me` (delete-all) is
+  explicitly Gate 6+ per reviewer v0.2 decision.
+- `POST /me/drafts/:id/transition` — status transition to
+  `applicant-approved`. Deferred until real-trial readiness
+  criteria are met (§11).
+- **Interview-prep persistence** —
+  `GET/PUT /me/interview-prep/:schoolId` deferred. Interview
+  panel remains render-only from the deterministic runner.
+- **Broad school-research CRUD** — `GET/PUT /me/school-research/:schoolId`
+  deferred. The runner reads school research from the schools
+  record inline; a dedicated CRUD surface waits for Gate 6+.
+- **Broad citation CRUD** — `GET/POST/PUT/DELETE /me/citations`
+  deferred. Citations in Gate 5 are seeded via the school write
+  path only.
+- `GET /me/audit` (self-serve audit read), `GET /me/export`,
+  and any reconcile endpoint — deferred to Gate 6+.
+- `POST /run/school-fit` — the school-fit engine ships as part
+  of the copilot run; no standalone endpoint.
+- **Admin / reviewer surfaces** — no `/admin/*` in Gate 5.
+- **Document upload** — no `multipart/form-data` anywhere.
+- **External providers** — no LLM / scoring API / parser
+  integration.
 
 ### 4.2 Read / write boundaries
 
@@ -290,16 +396,23 @@ Base path: `/api/admissions`.
   responses.
 - No `GET /admin/*` in Gate 5. Admin access is out of scope.
 
-### 4.3 Auth + entitlement
+### 4.3 Auth + entitlement (mounted routes only)
 
-- **Auth:** existing 528 AI JWT / session middleware. Backend
-  refuses `401` if the token is missing or invalid.
-- **Entitlement:** middleware checks (a) backend flag
-  `ADMISSIONS_COPILOT_ENABLED === "1"` AND (b) the user's
-  `subscription_tier ∈ {elite, vip}`. Missing either →
-  `403` with `error: "entitlement"`.
-- Fail-closed: if the entitlement check throws or the flag is
-  unreadable, the middleware returns `403`.
+The check ordering below applies **only when the
+`/api/admissions` router has been mounted** — i.e. inside UAT or
+tests where `ADMISSIONS_COPILOT_ENABLED === "1"`. In production
+the router is not mounted at all; see §4.6.
+
+- **Auth:** existing 528 AI JWT / session middleware. Missing or
+  invalid token → `401` with `error: "auth"`.
+- **Entitlement:** middleware checks that the user's
+  `subscription_tier ∈ {elite, vip}`. Missing → `403` with
+  `error: "entitlement"`.
+- **Ownership:** every read/write reads `user_id` from the auth
+  token, never from the request body. Cross-user access → `403`
+  with `error: "entitlement"`.
+- Fail-closed: any exception in the entitlement or ownership
+  check surfaces as `403`, not `500`.
 
 ### 4.4 Error shape
 
@@ -339,43 +452,68 @@ Consistent envelope across all endpoints:
 - `DELETE` endpoints are idempotent by construction (delete of a
   missing row returns `204`).
 
-### 4.6 No production enablement
+### 4.6 No production enablement — routes stay UNMOUNTED
 
-- The backend flag `ADMISSIONS_COPILOT_ENABLED` remains unset in
-  the Render production env. Every endpoint respects the
-  entitlement middleware; without the flag, all `/api/admissions/*`
-  paths (except `GET /health`, which returns 404) return `403`.
-- Gate 5's PR ships with a production smoke test that hits
-  `GET /api/admissions/health` (still returns 200/404 per Gate 2
-  contract), plus a defensive `GET /me/profile` that must return
-  `403`. If either misbehaves in prod after merge, the PR fails
-  post-merge verification.
+- **`ADMISSIONS_COPILOT_ENABLED` unset ⇒ the entire
+  `/api/admissions` router is unmounted.** The Express app never
+  registers those routes at boot; requests to any
+  `/api/admissions/*` path hit the app's global 404 handler.
+  The router is not "mounted and returning 403" — it does not
+  exist in the running process. This matches Gate 2's existing
+  behavior for the health probe.
+- The single exception is `GET /api/admissions/health`. That
+  endpoint is a **feature-gate probe** — it returns `404` when
+  the flag is unset (equivalent to "router not mounted") and
+  `200` when the flag is set. Its behavior is unchanged from
+  Gate 2 §4.
+- **`403` is only returned inside mounted routes** — i.e. when
+  the flag is `"1"` AND the request reached auth/entitlement/
+  ownership middleware AND one of those checks failed.
+- Post-merge production smoke test verifies:
+  - `GET /api/admissions/health` returns `404` (router
+    unmounted, per Gate 2).
+  - No other `/api/admissions/*` path is reachable — a
+    representative call (e.g. `GET /api/admissions/me/profile`)
+    returns the app's global 404 with no route-specific body.
+  If either misbehaves in prod after merge, the PR fails
+  post-merge verification and a rollback runbook is executed.
 
 ---
 
 ## 5. Migration plan
 
-### 5.1 Tables needed first (Gate 5 initial slice)
+### 5.1 Tables needed first (Gate 5 initial slice, v0.2)
 
-Only the tables required to persist a Gate-4-shaped run. Everything
-else is deferred to Gate 6+.
+Only the tables required to persist a Gate-4-shaped run.
+`admissions.draft_versions` is included per reviewer v0.2.
+Everything else is deferred (see §5.2).
+
+**Structural constraints only.** Per reviewer v0.2, DB triggers
+that duplicate Gate 3 rule enforcement (notably the MCAT
+3/4/7 attempt-window checks) are **not** included in Gate 5.
+DB constraints stay structural: `NOT NULL`, `UNIQUE`, FKs, and
+simple `CHECK` on primitive ranges (e.g. `score BETWEEN 118 AND 132`).
+Business-rule enforcement (attempt-year windows, AMCAS caps,
+sensitivity gates) lives at the API layer, driven by Gate 3's
+frozen rule registry.
 
 | Order | Table | Gate 3 entity | Notes |
 |---|---|---|---|
-| 1 | `admissions.applicant_profiles` | §1.1 applicantProfile | 1:1 with `public.users.id`. MVP columns only. Sensitive fields are `NULL`-able and marked `sensitive_deferred = true`. |
-| 2 | `admissions.academic_metrics` | §1.2 academicMetrics | 1:1 with applicant. |
-| 3 | `admissions.mcat_attempts` | §1.3 MCAT | 1:many with applicant. Enforces the three attempt caps at the DB layer via a trigger AND at the API layer via the Gate 3 rules — both must pass. |
-| 4 | `admissions.preview_scores` | §1.4 PREview | 1:many with applicant. |
-| 5 | `admissions.activities` | §1.6 activities + §1.5 experienceHours (folded) | AMCAS caps enforced at API layer. |
-| 6 | `admissions.evidence_items` | §1.7 evidence bank | Includes `confirmed`, `sensitivity_tags[]`, `activity_links[]`. |
-| 7 | `admissions.schools` | §1.8 schoolListEntry | Portal-generated `school_id` UUID. `aamc_school_id` is nullable. |
-| 8 | `admissions.school_research` | §1.9 schoolResearch | 1:1 with `schools`. `fit_axes` JSONB. |
-| 9 | `admissions.citations` | §1.10 citations | `school_scope_id` FK to `admissions.schools` when set. |
+| 1 | `admissions.applicant_profiles` | §1.1 applicantProfile | 1:1 with `public.users.id`. MVP columns only. Sensitive fields are `NULL`-able and refused at the API until Gate 6+. |
+| 2 | `admissions.academic_metrics` | §1.2 academicMetrics | 1:1 with applicant. `CHECK (cumulative_gpa BETWEEN 0.0 AND 4.0)`. |
+| 3 | `admissions.mcat_attempts` | §1.3 MCAT | 1:many with applicant. Structural CHECKs only (section score range, sum-mismatch is API-side). Attempt-window caps (3/year, 4/two-year, 7/lifetime) enforced by API validators; **no DB triggers**. |
+| 4 | `admissions.preview_scores` | §1.4 PREview | 1:many with applicant. `CHECK (score BETWEEN 1 AND 9)`. |
+| 5 | `admissions.activities` | §1.6 activities + §1.5 experienceHours (folded) | AMCAS caps + most-meaningful count enforced at the API. `hours_by_year` as JSONB. |
+| 6 | `admissions.evidence_items` | §1.7 evidence bank | `confirmed BOOLEAN`, `sensitivity_tags TEXT[]`, `activity_links UUID[]`. |
+| 7 | `admissions.schools` | §1.8 schoolListEntry | Portal-generated `school_id` UUID. `aamc_school_id` is nullable. `location` JSONB. |
+| 8 | `admissions.school_research` | §1.9 schoolResearch | 1:1 with `schools`. `fit_axes` JSONB. `key_programs TEXT[]`. Broad CRUD deferred (§4.1.2); Gate 5 writes it as a nested object on the schools write path. |
+| 9 | `admissions.citations` | §1.10 citations | `school_scope_id` FK to `admissions.schools` when set. Broad CRUD deferred (§4.1.2); Gate 5 writes citations via the schools path only. |
 | 10 | `admissions.secondary_prompts` | §1.11 secondaryPrompts | `source_citation_id` FK to `citations`. |
 | 11 | `admissions.prompt_interpretations` | §1.12 promptInterpretations | 1:1 with prompt. |
-| 12 | `admissions.drafts` | §1.13 drafts | `sentence_index` JSONB. `evidence_citations` + `school_citations` as arrays validated at write time. |
-| 13 | `admissions.do_not_use_topics` | §1.15 doNotUseTopics | `match_phrases` TEXT[]. |
-| 14 | `admissions.audit_log` | (new — Gate 5) | See §6.4. |
+| 12 | `admissions.drafts` | §1.13 drafts | `sentence_index` JSONB. `evidence_citations` + `school_citations` as `UUID[]`. `current_version_number INTEGER` pointing at the latest row in `draft_versions`. |
+| 13 | `admissions.draft_versions` | §1.13 drafts, versioned | 1:many under `drafts`. One row per `PUT /me/drafts/:id`. `(draft_id, version_number)` UNIQUE. Retention capped in UAT — see §6.3. |
+| 14 | `admissions.do_not_use_topics` | §1.15 doNotUseTopics | `match_phrases` TEXT[]. |
+| 15 | `admissions.audit_log` | (new — Gate 5) | Append-only. See §6.4. |
 
 ### 5.2 Tables deferred
 
@@ -415,13 +553,26 @@ prefix (`0001_create_admissions_schema.sql`,
 - Data migrations (backfills) are additive-only in Gate 5. No
   destructive `UPDATE`s on existing rows.
 
-### 5.5 Production cleanup — deferred
+### 5.5 Production cleanup — deferred (correct description, v0.2)
 
-The pre-existing production `admissions.documents` orphan (see
-project history — leftover test-shaped row from an earlier
-verification) is **not** touched by Gate 5. Its cleanup is a
-separate PR with a separate approval, and is called out in the
-runbook so the reviewer can decide independently.
+The pre-existing production row is a **test-shaped
+`admissions.documents` row linked to a legitimate `user_id`,
+with local-stub storage, pending verification, and no real
+bytes**. It is not an orphan — it is a legitimately-owned row
+whose payload is a stub from an earlier verification pass.
+
+Its cleanup is **deferred** and remains a separate PR with a
+separate reviewer approval. Gate 5:
+
+- Does not read, edit, or delete the row.
+- Does not touch the `admissions.documents` table at all (that
+  table pre-dates the Gate 5 schema and its cleanup path is a
+  reviewer-owned runbook, not part of any Gate 5 migration).
+- Documents the row's current state in the runbook so the
+  reviewer can decide the cleanup approach independently.
+
+Nothing in Gate 5 migrations references `admissions.documents`
+or its user's records.
 
 ---
 
@@ -461,16 +612,24 @@ free-text that would count as PII beyond the fields already
 enumerated in Gate 3 §1, ephemeral fetch responses, request-side
 headers, JWT contents.
 
-### 6.3 Draft versioning
+### 6.3 Draft versioning — bounded retention (v0.2)
 
 - Every `PUT /me/drafts/:id` writes a new row to
-  `admissions.draft_versions` and updates `admissions.drafts` to
-  point at the new version. `versionNumber` is monotonically
-  increasing per `(user_id, prompt_id)`.
-- Retention: keep every version in UAT (small footprint). A prod
-  retention policy is Gate 6+ (once we understand real cardinality).
+  `admissions.draft_versions` and updates `admissions.drafts`
+  to point at the new `current_version_number`. `version_number`
+  is monotonically increasing per `(user_id, prompt_id)` — a
+  `UNIQUE(user_id, prompt_id, version_number)` constraint on
+  `draft_versions` prevents gaps or collisions.
+- **UAT retention: latest 50 versions per `(user_id, prompt_id)`.**
+  Per reviewer v0.2. When the 51st version is written, the
+  oldest version for that `(user_id, prompt_id)` is deleted in
+  the same transaction. This is implemented as a small helper
+  `pruneDraftVersions(userId, promptId)` invoked from the
+  draft-write path — not a DB trigger (see §5.1 discipline).
 - The Gate 4 deterministic templates continue to produce the
   initial draft; Gate 5 just persists what the engine returns.
+- Production retention policy is deferred to Gate 6+ (once real
+  cardinality is understood). The bound stays at 50 in UAT.
 
 ### 6.4 Audit log
 
@@ -489,10 +648,14 @@ occurred_at (TIMESTAMPTZ)
 request_id (UUID matching the error-shape requestId)
 ```
 
-- The audit log is append-only. No `DELETE` privilege on the
-  table from the backend role.
-- Retention in UAT: unbounded (small volume). Production is
-  Gate 6+ concern.
+- The audit log is append-only. The backend role has `INSERT`
+  only — no `SELECT`, no `UPDATE`, no `DELETE`. Reviewer read
+  access is via a separate ops runbook using a distinct
+  read-only role (see §13.3 row 8).
+- **Retention in UAT: append-only, unbounded, for now.** Per
+  reviewer v0.2 decision, a retention policy MUST be defined
+  and approved before any real applicant trial (§11.1).
+  Production retention is out of scope until then.
 - Redaction (§8.4) strips evidence narratives, draft text, and
   any string field longer than 200 characters before writing to
   `before_payload` / `after_payload` — the log records **what
@@ -631,8 +794,14 @@ audit log is intentionally lossy.
   discipline). No incrementing numeric IDs.
 - List endpoints require a cursor for pagination; the cursor is
   opaque and rejects tampered values with `400`.
-- Rate limiting is enabled on list endpoints (default: 60
-  requests / minute / user) — anti-enumeration + anti-brute.
+- **Rate limits (v0.2):**
+  - **Reads / lists** — 60 requests / minute / user.
+  - **Mutations** — 20 requests / minute / user per entity kind
+    (POST/PUT), with per-endpoint tightening allowed. Draft
+    writes (POST/PUT `/me/drafts/*`) are tightened further to
+    10 req/min/user to prevent version-storm.
+  - Rate limits are enforced by an in-memory sliding window in
+    Gate 5. A Redis-backed limiter is Gate 6+.
 
 ---
 
@@ -671,12 +840,24 @@ audit log is intentionally lossy.
     warnings (or none for the happy fixture)
 - These integration tests **never** run in production.
 
-### 9.4 No external provider tests
+### 9.4 No external provider tests (v0.2 allowlist)
 
-- The existing vitest fetch guard remains active.
+- The existing vitest fetch guard remains active in the portal.
 - Backend has an analogous guard: any `axios` / `fetch` call
   emitted by a backend module during test runs throws unless
-  the URL is on an allowlist (Render DB, GitHub, own health).
+  the URL matches the **v0.2 allowlist**:
+  - Same-host Render DB URL from `DATABASE_URL` (the DB driver's
+    own network path — checked by hostname, not string prefix).
+  - Loopback / same-service health probe (`http://localhost:<port>/api/admissions/health`).
+- **GitHub is not on the allowlist.** Gate 5 vendors the
+  contract JSON directly into the backend repo (§7.2), so tests
+  do not need GitHub network access. If a future change adds
+  a code path that reaches GitHub at test time, the fetch
+  guard will fail the test loudly and a reviewer decision is
+  required to widen the allowlist.
+- Any provider host (Anthropic, OpenAI, embedding APIs, etc.)
+  is refused by construction: the allowlist is a positive list,
+  not a denylist.
 
 ### 9.5 No private data fixtures
 
@@ -755,7 +936,10 @@ audit log is intentionally lossy.
 Nothing in Gate 5 unlocks a real applicant trial. Before any
 real trial may run:
 
-### 11.1 Required conditions
+### 11.1 Required conditions (v0.2)
+
+Every condition below is a **hard prerequisite**. Missing any
+single one blocks a real applicant trial.
 
 - **Independent security review** of the Gate 5 backend code
   (both API + DB migrations).
@@ -770,6 +954,22 @@ real trial may run:
   drops cleanly.
 - **Audit log verification** — sample 100 audit rows from UAT,
   confirm they redact narratives per §8.4.
+- **Audit log retention policy defined and approved.** In UAT,
+  the log is append-only and unbounded (§6.4). Before a real
+  trial, the reviewer must approve a retention policy (max
+  age, max rows per user, purge/archive procedure). Not
+  optional.
+- **Delete / export / reconcile policy defined and approved.**
+  Per reviewer v0.2: no real applicant trial may run until this
+  policy is approved. This includes at minimum:
+  - `DELETE /me` semantics (immediate hard delete vs
+    tombstoned soft delete)
+  - `GET /me/export` schema (which fields, which format,
+    which encryption at rest)
+  - Reconcile path for entry errors and how the audit log
+    supports it
+  These endpoints are still deferred to Gate 6+, but the
+  **policy** must exist before a trial, not just the code.
 
 ### 11.2 Data entry path (once approved)
 
@@ -867,37 +1067,20 @@ gated fetch calls:
 - Mobile / Growth Engine
 - Cleanup of pre-existing prod admissions pollution
 
-### 13.3 Open questions for the reviewer
+### 13.3 Resolved decisions (from v0.1 open questions)
 
-Please confirm or redirect before Gate 5 implementation begins:
+All prior open questions are resolved per reviewer v0.2:
 
-1. **Endpoint list (§4.1).** The 40-endpoint list is comprehensive
-   for the Gate 3 entity set. Should we narrow it to a smaller
-   MVP for Gate 5 (e.g. profile / metrics / mcat / evidence /
-   drafts only) and defer the rest to Gate 6? Recommendation:
-   ship the full list because the Gate 4 flow already exercises
-   most of them and stubbing the rest creates drift risk.
-2. **Vendoring vs generating the contract JSON (§7.2).** Gate 5
-   vendors the JSON file into the backend repo. An alternative
-   is to publish it as a versioned artifact (e.g. a GitHub
-   Release asset) that both repos pull. Recommendation: vendor;
-   simpler for Gate 5. Confirm.
-3. **Draft version retention (§6.3).** Unbounded in UAT. Is that
-   acceptable, or would the reviewer prefer a bounded window
-   (e.g. last 50 versions per prompt)?
-4. **Audit log retention (§6.4).** Unbounded in UAT. Same
-   question: bound it?
-5. **Rate limits (§8.6).** Default 60 requests / minute / user on
-   list endpoints. Adjust up or down?
-6. **Real-trial data-entry path (§11.2).** Portal only, no CSV /
-   upload. Confirm this stays the boundary for Gate 6+.
-7. **Delete / export endpoints (§11.3).** Deferred to Gate 6+.
-   Confirm the reviewer is aware they're not in Gate 5.
-8. **Backend audit log privileges.** The backend role in Render
-   is granted append-only on `admissions.audit_log`. Is there a
-   separate role (e.g. an ops role) that should have read
-   access, or does the reviewer read via a runbook-scripted
-   ad-hoc connection?
+| # | Question | Resolution |
+|---|---|---|
+| 1 | Endpoint list scope (v0.1 §4.1) | **Narrower Gate 5 MVP.** See §4.1.1 for the 37-endpoint list and §4.1.2 for what is deferred to Gate 6+. |
+| 2 | Contract JSON distribution (§7.2) | **Vendor the JSON into `mcat-study-app-backend`.** Paired `expectedSnapshotHash.js` mirror; parity + freeze tests in both repos; no artifact fetching. |
+| 3 | Draft version retention (§6.3) | **Latest 50 versions per `(user_id, prompt_id)` in UAT.** Pruned in the write path, not by a DB trigger. |
+| 4 | Audit log retention (§6.4) | **Append-only and unbounded in UAT for now.** A retention policy MUST be defined before any real trial and is a hard prerequisite in §11.1. |
+| 5 | Rate limits (§8.6) | **60 req/min/user for reads/lists is OK. Stricter mutation limits allowed.** Mutation defaults: 20 req/min/user per entity kind, subject to per-endpoint tightening. |
+| 6 | Real-trial data-entry path (§11.2) | **Portal only.** No CSV import, no upload, no admin console, no direct DB entry. Boundary applies to Gate 6+ as well. |
+| 7 | Delete / export endpoints (§11.3) | **Deferred to Gate 6+.** Additionally, per reviewer v0.2, **no real applicant trial may run until delete / export / reconcile policy is approved.** This is a hard readiness criterion added to §11.1. |
+| 8 | Backend audit log privileges (§6.4) | **Backend role is append-only** (`INSERT` on `admissions.audit_log`; no `SELECT`, no `UPDATE`, no `DELETE`). Read access happens via a separate **ops/reviewer runbook** path — a Render psql-shell session using a distinct read-only role, never through a backend HTTP endpoint. Documented in the UAT runbook. |
 
 ### 13.4 Timeline (estimate — for planning only)
 
