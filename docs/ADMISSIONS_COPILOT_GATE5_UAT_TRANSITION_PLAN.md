@@ -1,6 +1,9 @@
-# Admissions Copilot — Gate 5 UAT Transition Plan (v0.2)
+# Admissions Copilot — Gate 5 UAT Transition Plan (v0.3)
 
-**Status:** v0.2 — reviewer-corrected pre-implementation draft.
+**Status:** v0.3 — reviewer-corrected pre-implementation draft.
+The v0.2 changelog block below remains as the authoritative record
+of what changed since v0.1; v0.3 corrections are called out
+immediately after it in the "v0.3 changelog" section.
 **Scope:** Plan the transition from Gate 4's fictional in-memory
 portal flow to a controlled **UAT-ready** Admissions Copilot
 architecture: authenticated user-owned records, a Render
@@ -23,6 +26,51 @@ touched.
 
 This is a **planning gate**. Nothing is implemented until the
 reviewer signs off on this plan.
+
+## v0.3 changelog vs v0.2
+
+Narrow cleanup pass per reviewer's Gate 5 v0.3 correction request.
+No new content; four internal contradictions removed:
+
+1. **§9.1 CI schema isolation now matches §3.3 exactly.**
+   v0.2 §9.1 still said "each PR spawns a fresh branch schema
+   inside the shared Render test DB. Prefix `pr_<n>`." That text
+   is removed. §9.1 now describes the same six-step run
+   (concurrency group → drop/create `admissions` schema →
+   migrate up → tests → migrate down → release). **No `pr_<n>`
+   schemas anywhere in the plan.**
+2. **Backend flag-off wording is uniformly "router unmounted".**
+   Fixed in two places that still implied `403`:
+   - §10.2 previously said "every `/api/admissions/*` route
+     returns `403` (except `GET /health` which returns `404`)."
+     Now says the router is not mounted at boot; requests hit
+     the Express global 404 handler with no route-specific
+     body. `403` is only meaningful inside mounted UAT/test
+     routes.
+   - §9.7 previously listed "user has entitlement but backend
+     flag is unset → `403`" as an auth-test case. That case is
+     removed; the "flag off" behavior is verified by a new
+     §9.7a router-mount test that asserts no `/api/admissions/*`
+     route is registered at boot and that requests hit the
+     global 404 with no route-specific body.
+3. **DELETE remnants removed from Gate 5.**
+   - §4.5 previously said "`DELETE` endpoints are idempotent by
+     construction (delete of a missing row returns `204`)." Now
+     says Gate 5 ships **no** `DELETE` route; the idempotent-delete
+     property is documented as Gate 6+ behavior for when those
+     endpoints ship.
+   - §9.2 previously listed "`204` on `DELETE`" as a contract
+     test. That line is removed. §9.2 explicitly says no
+     `DELETE` / `204` contract tests in Gate 5.
+4. **§13.4 timeline updated to the narrowed MVP endpoint count.**
+   v0.2 §13.4 still said "Endpoint implementation (40 endpoints…)".
+   Corrected to **37 endpoints** (matching §4.1.1) with no
+   `DELETE` routes, no transition, no interview-prep, no broad
+   school-research / citation CRUD, no export/reconcile. Total
+   estimate revised from ~8.5 to ~7.5 working days.
+
+All v0.2 corrections carry forward unchanged (see v0.2 changelog
+below).
 
 ## v0.2 changelog vs v0.1
 
@@ -449,8 +497,13 @@ Consistent envelope across all endpoints:
   with `409` if the version has moved since the caller last
   read. This is what protects the `drafts.versionNumber`
   progression in Gate 3.
-- `DELETE` endpoints are idempotent by construction (delete of a
-  missing row returns `204`).
+- **`DELETE` endpoints are not part of Gate 5.** Per §4.1.2, all
+  per-record delete endpoints and `DELETE /me` are deferred to
+  Gate 6+; deletion in Gate 5 is runbook-scripted only. When
+  those endpoints ship in a later gate, they will be idempotent
+  by construction (delete of a missing row returns `204`). Gate
+  5's PR ships **no** HTTP `DELETE` route under
+  `/api/admissions/*`.
 
 ### 4.6 No production enablement — routes stay UNMOUNTED
 
@@ -809,24 +862,40 @@ audit log is intentionally lossy.
 
 ### 9.1 Render-backed CI tests
 
-- Each PR spawns a fresh **branch schema** inside the shared
-  Render test DB. Prefix `pr_<n>` on schema name.
-- Migrations run up; API contract tests run; migrations run
-  down; schema is dropped. If any step fails, PR fails.
+Matches §3.3 exactly — one canonical schema, one dedicated Render
+test DB, serialized runs:
+
+- The Render test DB has a single `admissions` schema. There are
+  **no `pr_<n>` branch schemas** — the isolation guarantee comes
+  from the GitHub Actions concurrency group, not from schema
+  naming.
+- Every CI run:
+  1. Acquires the `admissions-schema` concurrency group.
+  2. `DROP SCHEMA admissions CASCADE; CREATE SCHEMA admissions;`
+     against the test DB.
+  3. Runs the ordered migrations up.
+  4. Runs the contract / integration tests.
+  5. Runs the migrations down as a rollback smoke test.
+  6. Releases the concurrency group.
 - No local Postgres, no Docker Postgres, no SQLite fallback.
 
 ### 9.2 API contract tests
 
-- One test file per endpoint from §4.1 covering:
+- One test file per endpoint from **§4.1.1** (the narrowed Gate
+  5 MVP surface) covering:
   - `401` without auth
   - `403` when entitlement missing
   - `403` when acting on another user's record (ownership check)
   - `422` on Gate 3 rule violation (every blocking rule for the
     entity)
   - `200` / `201` on happy path
-  - `409` on `If-Match` mismatch
-  - `204` on `DELETE`
-  - `429` on rate-limit exceeded (list endpoints only)
+  - `409` on `If-Match` mismatch (mutations only)
+  - `429` on rate-limit exceeded (list endpoints for the
+    read-list ceiling; mutation endpoints for the mutation
+    ceiling)
+- **No `DELETE` / `204` contract tests in Gate 5.** No `DELETE`
+  route ships in Gate 5 (§4.1.2, §4.5). Any test asserting
+  successful delete behavior is a Gate 6+ concern.
 
 ### 9.3 Portal integration tests
 
@@ -881,13 +950,30 @@ audit log is intentionally lossy.
 
 ### 9.7 Auth / entitlement tests
 
+Tests below run against a **mounted** `/api/admissions/*` router
+— i.e. `ADMISSIONS_COPILOT_ENABLED === "1"` (test env). When the
+flag is unset, the router is not mounted and there are no routes
+to test at all — the "flag off" behavior is a boot-time router
+check verified by §9.7a below.
+
 - Token missing → `401`.
 - Token present but user has no `admissions_copilot` entitlement
   → `403`.
-- User has entitlement but backend flag is unset → `403`.
 - Both flag and entitlement present → happy path proceeds.
 - Ownership: user A cannot read user B's records → `403` on
   every route.
+
+#### 9.7a Router-mount tests (flag off vs on)
+
+- **Backend flag unset:** boot the Express app with
+  `ADMISSIONS_COPILOT_ENABLED=""`, assert that no route matching
+  `/api/admissions/*` is registered (checked via the router
+  stack), and assert that a live request to
+  `/api/admissions/me/profile` hits the global 404 handler with
+  no route-specific body. **No `403` is expected here.**
+- **Backend flag set:** boot with `ADMISSIONS_COPILOT_ENABLED="1"`,
+  assert the router is registered, and assert that the auth /
+  entitlement tests above respond as documented.
 
 ---
 
@@ -906,10 +992,16 @@ audit log is intentionally lossy.
 
 - `ADMISSIONS_COPILOT_ENABLED` — same variable, same discipline
   as Gate 2 §4.
-- **Production:** unset. Every `/api/admissions/*` route returns
-  `403` (except `GET /health` which returns `404` to match Gate 2's
-  contract).
-- **UAT:** `"1"` in the UAT Render env.
+- **Production:** unset. The entire `/api/admissions` router is
+  **not mounted** at boot; requests to any `/api/admissions/*`
+  path (including `GET /health`) hit the Express global 404
+  handler with no route-specific body. This matches Gate 2's
+  existing behavior. **No `403` is emitted in production for
+  admissions paths** — 403 is only meaningful inside mounted
+  UAT/test routes.
+- **UAT:** `"1"` in the UAT Render env. Router mounted; health
+  returns `200`; mounted routes enforce auth / entitlement /
+  ownership and emit `401` / `403` per §4.3.
 - **CI:** `"1"` only inside the test runner's env.
 
 ### 10.3 UAT-only enablement
@@ -1087,12 +1179,16 @@ All prior open questions are resolved per reviewer v0.2:
 Contingent on approval:
 
 - Backend scaffolding + migrations + contract mirror: ~2 days
-- Endpoint implementation (40 endpoints, mostly boilerplate over
-  Zod-shaped inserts / updates): ~3 days
-- API contract tests + auth/entitlement / ownership tests: ~2 days
+- Endpoint implementation for the narrowed Gate 5 MVP surface
+  from §4.1.1 (**37 endpoints** — mostly boilerplate over
+  Zod-shaped inserts / updates; **no `DELETE` routes**; no
+  transition, interview-prep, broad school-research CRUD,
+  broad citation CRUD, or export/reconcile): ~2 days
+- API contract tests + auth/entitlement / ownership / router-mount
+  tests (§9.2 + §9.7 + §9.7a): ~2 days
 - Portal persistence adapter + tests: ~1 day
 - Runbooks + reviewer walkthrough: ~0.5 day
 
-Total: ~8.5 working days for the portal-side + backend-side
-Gate 5 delivery, contingent on the reviewer's open-question
-answers.
+Total: ~7.5 working days for the portal-side + backend-side
+Gate 5 delivery. The narrowed MVP shaves ~1 day off the earlier
+v0.2 estimate that mistakenly still cited 40 endpoints.
