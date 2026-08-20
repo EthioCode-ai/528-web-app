@@ -112,20 +112,26 @@ export default function RegisterPage() {
               <p className="text-white/80 text-[9px]">Scan on iOS</p>
             </div>
 
-            {/* Google Play — Coming Soon placeholder */}
+            {/* Google Play QR */}
             <div className="flex flex-col items-center text-center" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.7)" }}>
-              <div className="mb-1.5 px-2 py-0.5 rounded-full bg-slate-700/80 text-white/90 text-[9px] font-bold inline-flex items-center gap-1 shadow">
-                SOON
+              <div className="mb-1.5 px-2 py-0.5 rounded-full bg-emerald-500/90 text-white text-[9px] font-bold inline-flex items-center gap-1 shadow">
+                <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                LIVE
               </div>
-              <div className="w-20 h-20 rounded bg-white/85 shadow-md flex flex-col items-center justify-center gap-0.5">
-                <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                  <rect x="6" y="2.5" width="12" height="19" rx="2.25" />
-                  <line x1="11" y1="18.5" x2="13" y2="18.5" strokeLinecap="round" />
-                </svg>
-                <p className="text-slate-500 text-[8px] font-semibold leading-tight">Coming<br/>Soon</p>
-              </div>
-              <p className="text-white text-[11px] font-bold mt-1.5">Google Play</p>
-              <p className="text-white/80 text-[9px]">Android coming soon</p>
+              <a
+                href="https://play.google.com/store/apps/details?id=com.neuromart.mcatstudyapp"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open in Google Play"
+              >
+                <img
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.neuromart.mcatstudyapp"
+                  alt="Scan to install 528 AI on Android"
+                  className="w-20 h-20 rounded bg-white p-1 shadow-md"
+                />
+              </a>
+              <p className="text-white text-[11px] font-bold mt-1.5">Google Play Store</p>
+              <p className="text-white/80 text-[9px]">Scan on Android</p>
             </div>
           </div>,
           document.body
