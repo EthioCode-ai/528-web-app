@@ -8,7 +8,7 @@ describe("528 conversion analytics", () => {
   });
 
   it("dual-writes the privacy-safe registration outcome", () => {
-    track("mcat_528_registration_completed", {
+    const accepted = track("mcat_528_registration_completed", {
       auth_method: "email",
       plan: "free",
       product: "528_ai",
@@ -37,6 +37,7 @@ describe("528 conversion analytics", () => {
         product: "528_ai",
       })
     );
+    expect(accepted).toBe(true);
   });
 
   it("emits subscription outcomes with categorical properties only", () => {

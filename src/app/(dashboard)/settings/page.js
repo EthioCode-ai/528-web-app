@@ -160,18 +160,38 @@ export default function SettingsPage() {
 
     async function confirmSubscription() {
       try {
+        const deliveryKey = `__mcat_528_subscription_delivery_${sessionId}`;
+        let deliveryId = localStorage.getItem(deliveryKey);
+        if (!deliveryId) {
+          deliveryId = crypto.randomUUID();
+          localStorage.setItem(deliveryKey, deliveryId);
+        }
         const outcome = await apiFetch(
-          `/stripe/checkout-session-status?session_id=${encodeURIComponent(sessionId)}`
+          `/stripe/checkout-session-status?session_id=${encodeURIComponent(sessionId)}&delivery_id=${encodeURIComponent(deliveryId)}`
         );
         if (cancelled || !outcome?.completed) return;
 
         setShowSuccess(true);
         const dedupeKey = `__mcat_528_subscription_completed_${sessionId}`;
-        if (!localStorage.getItem(dedupeKey)) {
+        if (outcome.should_track && !localStorage.getItem(dedupeKey)) {
           const categories = subscriptionCategories(outcome.plan, outcome.tier);
           if (categories) {
-            track("mcat_528_subscription_completed", categories);
-            localStorage.setItem(dedupeKey, "1");
+            const accepted = track(
+              "mcat_528_subscription_completed",
+              categories
+            );
+            if (accepted) {
+              const ack = await apiFetch(
+                "/stripe/checkout-session-outcome-ack",
+                {
+                  method: "POST",
+                  body: JSON.stringify({ sessionId, deliveryId }),
+                }
+              );
+              if (ack?.acknowledged) {
+                localStorage.setItem(dedupeKey, "1");
+              }
+            }
           }
         }
 

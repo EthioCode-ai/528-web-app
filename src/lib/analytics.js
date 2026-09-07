@@ -214,30 +214,39 @@ export function track(event, properties) {
     platform: "web",
     ...sanitizeEventParams(event, properties),
   };
+  let accepted = false;
 
   // PostHog: canonical name + optional legacy dual-capture. Gets the
   // full sanitized props — high-cardinality entity IDs are valuable
   // for debugging / session investigation.
   const posthog = getPosthog();
   if (posthog) {
-    try { posthog.capture(event, props); } catch {}
+    try {
+      posthog.capture(event, props);
+      accepted = true;
+    } catch {}
     const legacy = POSTHOG_LEGACY_ALIASES[event];
     if (legacy) {
-      try { posthog.capture(legacy, props); } catch {}
+      try {
+        posthog.capture(legacy, props);
+        accepted = true;
+      } catch {}
     }
   }
 
   // GA4: only if the event is in the allowlist AND with entity IDs
   // stripped. Prevents high-cardinality dimension explosion in GA4
   // while PostHog keeps the full detail.
-  if (!GA4_ALLOWED_EVENTS.has(event)) return;
+  if (!GA4_ALLOWED_EVENTS.has(event)) return accepted;
   const gtag = getGtag();
   if (gtag) {
     const ga4Props = stripGa4Forbidden(props);
     try {
       gtag("event", event, { send_to: GA4_MEASUREMENT_ID, ...ga4Props });
+      accepted = true;
     } catch {}
   }
+  return accepted;
 }
 
 export function identify(distinctId, properties) {
