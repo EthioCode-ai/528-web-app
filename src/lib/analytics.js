@@ -8,9 +8,7 @@
 // GA4 dual-write (property 543460798):
 //   - PostHog receives ALL events (existing behavior preserved).
 //   - GA4 receives ONLY events in GA4_ALLOWED_EVENTS (explicit allowlist).
-//     Events NOT in the allowlist stay PostHog-only. checkout_*,
-//     subscription_*, and purchase events are deliberately excluded
-//     from GA4 until the revenue tracking pass ships.
+//     Events NOT in the allowlist stay PostHog-only.
 //   - GA4 events additionally strip high-cardinality entity IDs
 //     (GA4_FORBIDDEN_KEYS) at the emission boundary. PostHog keeps
 //     the full sanitized shape for debugging / session investigation.
@@ -47,7 +45,10 @@ const GA4_MEASUREMENT_ID = "G-YCEJQLJ7K5";
 // revenue tracking pass ships.
 const GA4_ALLOWED_EVENTS = new Set([
   "signup_started",
-  "signup_completed",
+  "mcat_528_registration_completed",
+  "mcat_528_login_completed",
+  "mcat_528_subscription_started",
+  "mcat_528_subscription_completed",
   "diagnostic_started",
   "diagnostic_completed",
   "study_plan_created",
@@ -69,13 +70,39 @@ const GA4_ALLOWED_EVENTS = new Set([
   "account_deleted",
 ]);
 
-// canonical event name -> legacy PostHog event name to ALSO capture.
-// Currently empty — no legacy dual-capture needed. The taxonomy is
-// stable; signup_started / signup_completed map directly to the
-// existing PostHog names and no rename is in flight. Populate this
-// map only if a future canonical rename would otherwise orphan a
-// PostHog dashboard.
-const POSTHOG_LEGACY_ALIASES = {};
+// Canonical event name -> legacy PostHog event name to ALSO capture.
+// This keeps existing dashboards intact while the shared mcat_528
+// conversion taxonomy becomes the canonical cross-site vocabulary.
+const POSTHOG_LEGACY_ALIASES = {
+  mcat_528_registration_completed: "signup_completed",
+  mcat_528_subscription_started: "checkout_started",
+  mcat_528_subscription_completed: "checkout_completed",
+};
+
+// Conversion events cross an especially strict privacy boundary. Call sites
+// may only send these fixed dimensions and categorical values. Any accidental
+// ID, free-form string, or personal field is dropped before either provider.
+const CONVERSION_EVENT_PROPERTIES = {
+  mcat_528_registration_completed: {
+    auth_method: new Set(["email"]),
+    plan: new Set(["free"]),
+    product: new Set(["528_ai"]),
+  },
+  mcat_528_login_completed: {
+    auth_method: new Set(["email"]),
+    product: new Set(["528_ai"]),
+  },
+  mcat_528_subscription_started: {
+    billing_interval: new Set(["monthly", "six_month", "annual"]),
+    plan: new Set(["scholar", "elite"]),
+    product: new Set(["528_ai"]),
+  },
+  mcat_528_subscription_completed: {
+    billing_interval: new Set(["monthly", "six_month", "annual"]),
+    plan: new Set(["scholar", "elite"]),
+    product: new Set(["528_ai"]),
+  },
+};
 
 // High-cardinality entity IDs — allowed in PostHog (useful for
 // debugging / session investigation) but STRIPPED from GA4 events at
@@ -147,6 +174,18 @@ function sanitizeParams(input) {
   return out;
 }
 
+function sanitizeEventParams(event, input) {
+  const schema = CONVERSION_EVENT_PROPERTIES[event];
+  if (!schema) return sanitizeParams(input);
+
+  const out = {};
+  for (const [key, allowedValues] of Object.entries(schema)) {
+    const value = input?.[key];
+    if (allowedValues.has(value)) out[key] = value;
+  }
+  return out;
+}
+
 function stripGa4Forbidden(props) {
   const out = {};
   for (const [k, v] of Object.entries(props)) {
@@ -171,7 +210,10 @@ function getGtag() {
 }
 
 export function track(event, properties) {
-  const props = sanitizeParams({ platform: "web", ...properties });
+  const props = {
+    platform: "web",
+    ...sanitizeEventParams(event, properties),
+  };
 
   // PostHog: canonical name + optional legacy dual-capture. Gets the
   // full sanitized props — high-cardinality entity IDs are valuable

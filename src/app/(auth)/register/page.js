@@ -51,12 +51,10 @@ export default function RegisterPage() {
 
       setAuth(data.token, data.user);
       identify(data.user?.id);
-      // Both PostHog and GA4 receive signup_completed as the canonical
-      // event name. No legacy dual-capture needed — this IS the name
-      // existing PostHog dashboards already know.
-      track("signup_completed", {
-        source: "email",
-        user_tier: "free",
+      track("mcat_528_registration_completed", {
+        auth_method: "email",
+        plan: "free",
+        product: "528_ai",
       });
       router.push("/verify-email");
     } catch (err) {
