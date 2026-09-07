@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
-import { identify } from "@/lib/analytics";
+import { identify, track } from "@/lib/analytics";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,6 +28,10 @@ export default function LoginPage() {
 
       setAuth(data.token, data.user);
       identify(data.user?.id);
+      track("mcat_528_login_completed", {
+        auth_method: "email",
+        product: "528_ai",
+      });
       router.push("/dashboard");
     } catch (err) {
       setError(err.message || "Login failed. Please try again.");

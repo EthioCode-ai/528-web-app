@@ -65,6 +65,28 @@ function computeSavingsPercent(price, prices) {
   return pct > 0 ? pct : null;
 }
 
+function subscriptionCategories(plan, tier) {
+  const normalizedTier = tier === "vip" ? "elite" : tier;
+  const paidTier =
+    normalizedTier === "scholar" || normalizedTier === "elite"
+      ? normalizedTier
+      : null;
+  const billingInterval = plan?.endsWith("_monthly")
+    ? "monthly"
+    : plan?.endsWith("_6month")
+      ? "six_month"
+      : plan?.endsWith("_annual")
+        ? "annual"
+        : null;
+
+  if (!paidTier || !billingInterval) return null;
+  return {
+    product: "528_ai",
+    plan: paidTier,
+    billing_interval: billingInterval,
+  };
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -129,23 +151,57 @@ export default function SettingsPage() {
     };
   }, [isElite]);
 
-  // Handle ?success=true after a successful Stripe checkout return.
-  // 1) Refresh user data so the tier badge / pricing table reflect the
-  //    new subscription (set server-side via webhook).
-  // 2) Show the success banner.
-  // 3) Strip ?success from the URL so refresh doesn't re-fire it.
+  // Verify the returned Checkout Session server-side before reporting an
+  // outcome. localStorage prevents refreshes or new tabs from emitting it twice.
   useEffect(() => {
-    if (searchParams?.get("success") !== "true") return;
+    const sessionId = searchParams?.get("session_id");
+    if (!sessionId) return;
     let cancelled = false;
-    setShowSuccess(true);
-    track("checkout_completed");
-    apiFetch("/auth/me")
-      .then((freshUser) => {
+
+    async function confirmSubscription() {
+      try {
+        const deliveryKey = `__mcat_528_subscription_delivery_${sessionId}`;
+        let deliveryId = localStorage.getItem(deliveryKey);
+        if (!deliveryId) {
+          deliveryId = crypto.randomUUID();
+          localStorage.setItem(deliveryKey, deliveryId);
+        }
+        const outcome = await apiFetch(
+          `/stripe/checkout-session-status?session_id=${encodeURIComponent(sessionId)}&delivery_id=${encodeURIComponent(deliveryId)}`
+        );
+        if (cancelled || !outcome?.completed) return;
+
+        setShowSuccess(true);
+        const dedupeKey = `__mcat_528_subscription_completed_${sessionId}`;
+        if (outcome.should_track && !localStorage.getItem(dedupeKey)) {
+          const categories = subscriptionCategories(outcome.plan, outcome.tier);
+          if (categories) {
+            const accepted = track(
+              "mcat_528_subscription_completed",
+              categories
+            );
+            if (accepted) {
+              const ack = await apiFetch(
+                "/stripe/checkout-session-outcome-ack",
+                {
+                  method: "POST",
+                  body: JSON.stringify({ sessionId, deliveryId }),
+                }
+              );
+              if (ack?.acknowledged) {
+                localStorage.setItem(dedupeKey, "1");
+              }
+            }
+          }
+        }
+
+        const freshUser = await apiFetch("/auth/me");
         if (!cancelled && freshUser) setUser(freshUser);
-      })
-      .catch(() => {
-        // Non-fatal — banner still shows; tier will catch up on next load
-      });
+      } catch {
+        // Non-fatal — an unverified return never emits a completion event.
+      }
+    }
+    confirmSubscription();
     router.replace("/settings", { scroll: false });
     const fadeTimer = setTimeout(() => {
       if (!cancelled) setShowSuccess(false);
@@ -167,7 +223,14 @@ export default function SettingsPage() {
         body: JSON.stringify({ priceId }),
       });
       if (!result?.url) throw new Error("No checkout URL returned");
-      track("checkout_started", { priceId });
+      const selectedPrice = prices?.find((price) => price.id === priceId);
+      const categories = subscriptionCategories(
+        selectedPrice?.plan,
+        selectedPrice?.tier
+      );
+      if (categories) {
+        track("mcat_528_subscription_started", categories);
+      }
       // External redirect — must use window.location, not router.push
       window.location.href = result.url;
     } catch (err) {
