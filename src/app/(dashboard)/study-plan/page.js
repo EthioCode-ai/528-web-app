@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
@@ -22,6 +23,44 @@ const BLOCK_ICONS = {
   full_length: "🎯",
 };
 
+// Section short-names as emitted by the AI planner (gpt-4o-mini follows the
+// labels used in the user prompt + mastery payload). Mapped to the backend
+// section codes the diagnostic/content endpoints expect.
+const SECTION_CODE_BY_NAME = {
+  "Chem/Phys": "chem_phys",
+  "CARS": "cars",
+  "Bio/Biochem": "bio_biochem",
+  "Psych/Soc": "psych_soc",
+};
+
+function resolveSectionCode(sectionName) {
+  if (!sectionName) return null;
+  if (SECTION_CODE_BY_NAME[sectionName]) return SECTION_CODE_BY_NAME[sectionName];
+  // Fuzzy fallback — the model occasionally paraphrases ("Biology" vs "Bio/Biochem").
+  const lower = sectionName.toLowerCase();
+  for (const [name, code] of Object.entries(SECTION_CODE_BY_NAME)) {
+    const low = name.toLowerCase();
+    if (lower.includes(low) || low.includes(lower)) return code;
+  }
+  return null;
+}
+
+function resolveTopic(topicsForSection, topicName) {
+  if (!topicsForSection || !topicName) return null;
+  const needle = topicName.toLowerCase().trim();
+  // Exact match first — most reliable when the model echoes DB topic names.
+  let match = topicsForSection.find((t) => t.name.toLowerCase() === needle);
+  if (match) return match;
+  // Substring match either direction — catches "Molecular Biology" against
+  // a DB topic named "Molecular Biology & Enzyme Function" and vice versa.
+  match = topicsForSection.find(
+    (t) =>
+      t.name.toLowerCase().includes(needle) ||
+      needle.includes(t.name.toLowerCase())
+  );
+  return match || null;
+}
+
 export default function StudyPlanPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -34,15 +73,41 @@ export default function StudyPlanPage() {
   const [selectedWeek, setSelectedWeek] = useState(0);
   const [needsTestDate, setNeedsTestDate] = useState(false);
   const [planStale, setPlanStale] = useState(false);
+  // Topics grouped by section_code for resolving block.topic -> topicId
+  // so that Study Plan blocks become tappable deep-links into Section
+  // Drill with the exact topic locked. Fetched once on mount for Elite
+  // users; non-blocking (plan still renders if this fails).
+  const [topicsBySectionCode, setTopicsBySectionCode] = useState({});
 
   useEffect(() => {
     track("study_plan_viewed", { tier });
     if (isElite) {
       loadPlan();
+      loadTopics();
     } else {
       setLoading(false);
     }
   }, []);
+
+  const loadTopics = async () => {
+    try {
+      const data = await apiFetch("/content/all");
+      const sections = Array.isArray(data?.sections) ? data.sections : [];
+      const topics = Array.isArray(data?.topics) ? data.topics : [];
+      const sectionCodeById = new Map(sections.map((s) => [s.id, s.code]));
+      const grouped = {};
+      for (const t of topics) {
+        const code = sectionCodeById.get(t.section_id);
+        if (!code) continue;
+        if (!grouped[code]) grouped[code] = [];
+        grouped[code].push({ id: t.id, name: t.name });
+      }
+      setTopicsBySectionCode(grouped);
+    } catch {
+      // Non-fatal: without the topics map, blocks fall back to
+      // section-only drill links (still useful, just less precise).
+    }
+  };
 
   const loadPlan = async () => {
     setLoading(true);
@@ -243,8 +308,46 @@ export default function StudyPlanPage() {
               {day.blocks?.map((block, blockIdx) => {
                 const colorClass = BLOCK_COLORS[block.type] || "border-slate-400 text-slate-600";
                 const icon = BLOCK_ICONS[block.type] || "📌";
-                return (
-                  <div key={blockIdx} className={`border-l-[3px] pl-3 mb-3 ${colorClass.split(" ")[0]}`}>
+                const sectionCode = resolveSectionCode(block.section);
+                const topicMatch = sectionCode
+                  ? resolveTopic(topicsBySectionCode[sectionCode], block.topic)
+                  : null;
+
+                // Destination resolution:
+                //   content_review/practice/passage_practice → Section Drill
+                //     (topic-locked when we can resolve block.topic, otherwise
+                //      adaptive within the section).
+                //   flashcards → /flashcards (section/topic filters live
+                //     there separately; one tap gets the student into the
+                //     feature).
+                //   full_length → /diagnostic (full 20-question adaptive).
+                let href = null;
+                if (block.type === "flashcards") {
+                  href = "/flashcards";
+                } else if (block.type === "full_length") {
+                  href = "/diagnostic";
+                } else if (sectionCode) {
+                  const params = new URLSearchParams();
+                  params.set("section", sectionCode);
+                  if (topicMatch) {
+                    params.set("topic", String(topicMatch.id));
+                    params.set("topicName", topicMatch.name);
+                  }
+                  href = `/diagnostic?${params.toString()}`;
+                }
+
+                const onBlockTap = () => {
+                  track("study_plan_block_tapped", {
+                    block_type: block.type,
+                    section: block.section || null,
+                    topic: block.topic || null,
+                    topic_resolved: topicMatch ? 1 : 0,
+                    week_number: currentWeek?.week_number || selectedWeek + 1,
+                  });
+                };
+
+                const inner = (
+                  <>
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm">{icon}</span>
                       <span className={`text-[11px] font-bold tracking-wide ${colorClass.split(" ")[1]}`}>
@@ -253,10 +356,41 @@ export default function StudyPlanPage() {
                       {block.duration_minutes && (
                         <span className="text-[11px] text-slate-400 ml-auto">{block.duration_minutes} min</span>
                       )}
+                      {href && (
+                        <span className="text-[11px] text-slate-300 group-hover:text-slate-500 ml-1 transition-colors">
+                          ›
+                        </span>
+                      )}
                     </div>
                     {block.section && <p className="text-sm font-semibold text-slate-800 mt-1">{block.section}</p>}
                     {block.topic && <p className="text-xs text-slate-500 mt-0.5">{block.topic}</p>}
                     {block.notes && <p className="text-xs text-slate-400 mt-1 italic leading-relaxed">{block.notes}</p>}
+                    {href && topicMatch && block.topic && (
+                      <p className="text-[10px] text-emerald-600 mt-1 font-semibold">
+                        Tap to drill {topicMatch.name}
+                      </p>
+                    )}
+                    {href && !topicMatch && block.type !== "flashcards" && block.type !== "full_length" && sectionCode && (
+                      <p className="text-[10px] text-slate-400 mt-1 font-semibold">
+                        Tap to drill {block.section || "section"}
+                      </p>
+                    )}
+                  </>
+                );
+
+                const wrapperClass = `border-l-[3px] pl-3 mb-3 ${colorClass.split(" ")[0]}`;
+                return href ? (
+                  <Link
+                    key={blockIdx}
+                    href={href}
+                    onClick={onBlockTap}
+                    className={`${wrapperClass} block cursor-pointer group rounded-r hover:bg-slate-50 -mr-1 pr-2 py-1 transition-colors`}
+                  >
+                    {inner}
+                  </Link>
+                ) : (
+                  <div key={blockIdx} className={wrapperClass}>
+                    {inner}
                   </div>
                 );
               })}
