@@ -13,6 +13,8 @@ const useDiagnosticStore = create((set, get) => ({
   loading: false,
   results: null,
   sectionFilter: null,
+  topicFilter: null,
+  topicLabel: null,
   stats: {},
   gapAnalysis: null,
   trialExpired: false,
@@ -20,7 +22,7 @@ const useDiagnosticStore = create((set, get) => ({
   _sectionId: null,
 
   startDiagnostic: async (totalQuestions = 20) => {
-    set({ loading: true, results: null, stats: {}, questionNumber: 0, sectionFilter: null, trialExpired: false });
+    set({ loading: true, results: null, stats: {}, questionNumber: 0, sectionFilter: null, topicFilter: null, topicLabel: null, trialExpired: false });
     try {
       const data = await apiFetch("/diagnostic/start", {
         method: "POST",
@@ -44,34 +46,41 @@ const useDiagnosticStore = create((set, get) => ({
     }
   },
 
-  startSectionDrill: async (sectionCode) => {
-    set({ loading: true, results: null, stats: {}, questionNumber: 0, sectionFilter: sectionCode, trialExpired: false });
+  startSectionDrill: async (sectionCode, topicId = null, topicLabel = null) => {
+    set({ loading: true, results: null, stats: {}, questionNumber: 0, sectionFilter: sectionCode, topicFilter: topicId, topicLabel, trialExpired: false });
     try {
       const data = await apiFetch("/diagnostic/start", {
         method: "POST",
         body: JSON.stringify({ totalQuestions: 100, sectionCode }),
       });
       set({ attemptId: data.id, totalQuestions: 100, loading: false });
-      track("section_drill_started", { attemptId: data.id, sectionCode });
+      track("section_drill_started", { attemptId: data.id, sectionCode, topicId: topicId || undefined });
       await get().fetchNextQuestion();
       return true;
     } catch (err) {
       if (err.message?.includes("trial_expired")) {
-        set({ loading: false, sectionFilter: null, trialExpired: true });
+        set({ loading: false, sectionFilter: null, topicFilter: null, topicLabel: null, trialExpired: true });
       } else {
-        set({ loading: false, sectionFilter: null });
+        set({ loading: false, sectionFilter: null, topicFilter: null, topicLabel: null });
       }
       return false;
     }
   },
 
   fetchNextQuestion: async () => {
-    const { attemptId, sectionFilter } = get();
+    const { attemptId, sectionFilter, topicFilter } = get();
     if (!attemptId) return;
     set({ loading: true, selected: null, submitted: false, isCorrect: null });
     try {
-      const url = sectionFilter
-        ? `/diagnostic/${attemptId}/next?section=${sectionFilter}`
+      // Build URL with section + optional topic filter. Backend's
+      // /:attemptId/next route reads both query params and locks the
+      // adaptive engine's getNextTarget to a specific topic when set.
+      const params = new URLSearchParams();
+      if (sectionFilter) params.set("section", sectionFilter);
+      if (topicFilter) params.set("topic", String(topicFilter));
+      const qs = params.toString();
+      const url = qs
+        ? `/diagnostic/${attemptId}/next?${qs}`
         : `/diagnostic/${attemptId}/next`;
       const data = await apiFetch(url);
       set({

@@ -31,6 +31,8 @@ export default function DiagnosticPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sectionParam = searchParams.get("section");
+  const topicParam = searchParams.get("topic");
+  const topicLabelParam = searchParams.get("topicName");
   const user = useAuthStore((s) => s.user);
   const tier = user?.subscription_tier || "free";
   const isFree = tier === "free";
@@ -56,7 +58,12 @@ export default function DiagnosticPage() {
     if (!started) {
       setStarted(true);
       if (sectionParam) {
-        startSectionDrill(sectionParam);
+        // topicParam is a numeric topic id (from the topic picker or a
+        // Study Plan deep-link). topicLabelParam is the display name so
+        // the drill header can show "Molecular Biology" without needing
+        // an extra fetch. Both optional.
+        const topicIdNum = topicParam ? parseInt(topicParam, 10) : null;
+        startSectionDrill(sectionParam, topicIdNum || null, topicLabelParam || null);
       } else {
         startDiagnostic(20);
       }
