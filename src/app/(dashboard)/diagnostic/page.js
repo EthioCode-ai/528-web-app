@@ -39,7 +39,7 @@ export default function DiagnosticPage() {
 
   const {
     question, questionNumber, totalQuestions, selected, submitted, isCorrect,
-    loading, sectionFilter, stats, results, startDiagnostic, startSectionDrill,
+    loading, sectionFilter, topicLabel, stats, results, startDiagnostic, startSectionDrill,
     selectAnswer, submitAnswer, fetchNextQuestion, completeDiagnostic, reset,
   } = useDiagnosticStore();
 
@@ -228,7 +228,9 @@ export default function DiagnosticPage() {
           ← Exit
         </button>
         <span className="text-sm text-slate-500">
-          {sectionFilter ? "Section Drill" : "Diagnostic"} – Q{questionNumber}
+          {topicLabel
+            ? `${topicLabel} – Q${questionNumber}`
+            : `${sectionFilter ? "Section Drill" : "Diagnostic"} – Q${questionNumber}`}
           {!sectionFilter ? `/${totalQuestions}` : ""}
         </span>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
@@ -91,16 +91,18 @@ export default function StudyPlanPage() {
 
   const loadTopics = async () => {
     try {
-      const data = await apiFetch("/content/all");
-      const sections = Array.isArray(data?.sections) ? data.sections : [];
-      const topics = Array.isArray(data?.topics) ? data.topics : [];
-      const sectionCodeById = new Map(sections.map((s) => [s.id, s.code]));
+      // /content/all returns a TREE: an array of section objects, each
+      // with a nested `topics` array (and each topic has nested
+      // `subtopics`). Walk it to build a flat section_code -> topics[] map.
+      const tree = await apiFetch("/content/all");
       const grouped = {};
-      for (const t of topics) {
-        const code = sectionCodeById.get(t.section_id);
-        if (!code) continue;
-        if (!grouped[code]) grouped[code] = [];
-        grouped[code].push({ id: t.id, name: t.name });
+      if (Array.isArray(tree)) {
+        for (const section of tree) {
+          const code = section?.code;
+          if (!code) continue;
+          const sectionTopics = Array.isArray(section.topics) ? section.topics : [];
+          grouped[code] = sectionTopics.map((t) => ({ id: t.id, name: t.name }));
+        }
       }
       setTopicsBySectionCode(grouped);
     } catch {
