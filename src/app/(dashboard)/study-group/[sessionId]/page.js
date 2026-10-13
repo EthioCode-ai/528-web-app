@@ -232,6 +232,11 @@ export default function SessionPage({ params }) {
       const result = await apiFetch(`/study-group/${sessionId}/message`, {
         method: "POST",
         body: JSON.stringify({ content: trimmed }),
+        // Backend caps each Anthropic call at 30s and may chain two
+        // calls (grading + next question / phase opener). 75s leaves
+        // headroom for both plus DB + network overhead, and short-
+        // circuits any truly hung request so the spinner never sticks.
+        timeoutMs: 75000,
       });
       setMessages((prev) => [...prev, ...(result.messages || [])]);
       setPhase(result.phase);
@@ -254,12 +259,19 @@ export default function SessionPage({ params }) {
       // Roll back optimistic message so retry can reinsert it cleanly
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       // Backend's quiz-generation retry already fired on its side; a 503
-      // here means two Anthropic attempts both failed. Surface a retry
-      // affordance instead of a dead UI.
+      // here means two Anthropic attempts both failed. A request_timeout
+      // means the backend took > 75s to respond (hung network / Anthropic
+      // outage). Either way, surface a retry affordance instead of a
+      // dead UI with no way out.
       if (err.status === 503 && err.body?.error === "quiz_question_generation_failed") {
         setGenerationError({
           message: err.body.message || "The AI quizmaster could not generate a question right now.",
           phase: err.body.phase || null,
+        });
+      } else if (err.code === "request_timeout") {
+        setGenerationError({
+          message: "The server is taking too long to respond. This usually clears up in a moment.",
+          phase: null,
         });
       } else {
         setError(err.message || "Failed to send message");
