@@ -104,6 +104,14 @@ export default function SessionPage({ params }) {
   const [error, setError] = useState(null);
   const [input, setInput] = useState("");
   const [completionData, setCompletionData] = useState(null);
+  // Set when the backend returns a retryable 503 from quiz generation
+  // (two consecutive parse/model failures). Drives the dead-state banner
+  // so the user has an explicit Retry / Exit affordance instead of a
+  // frozen UI with no input.
+  const [generationError, setGenerationError] = useState(null);
+  // Last user content we tried to send — kept so Retry re-sends it
+  // verbatim after a quiz_question_generation_failed response.
+  const [lastUserContent, setLastUserContent] = useState(null);
 
   const transcriptRef = useRef(null);
 
@@ -204,6 +212,8 @@ export default function SessionPage({ params }) {
     if (sending || !trimmed) return;
     setSending(true);
     setError(null);
+    setGenerationError(null);
+    setLastUserContent(trimmed);
 
     // Optimistic user bubble
     const tempId = `temp-${Date.now()}`;
@@ -241,12 +251,37 @@ export default function SessionPage({ params }) {
         }
       }
     } catch (err) {
-      // Roll back optimistic message
+      // Roll back optimistic message so retry can reinsert it cleanly
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      setError(err.message || "Failed to send message");
+      // Backend's quiz-generation retry already fired on its side; a 503
+      // here means two Anthropic attempts both failed. Surface a retry
+      // affordance instead of a dead UI.
+      if (err.status === 503 && err.body?.error === "quiz_question_generation_failed") {
+        setGenerationError({
+          message: err.body.message || "The AI quizmaster could not generate a question right now.",
+          phase: err.body.phase || null,
+        });
+      } else {
+        setError(err.message || "Failed to send message");
+      }
     } finally {
       setSending(false);
     }
+  }
+
+  async function retryLastMessage() {
+    if (!lastUserContent) return;
+    setGenerationError(null);
+    await send(lastUserContent);
+  }
+
+  async function exitSession() {
+    try {
+      await apiFetch(`/study-group/${sessionId}/abandon`, { method: "POST" });
+    } catch {
+      // Non-fatal — navigate away regardless so user escapes a stuck session.
+    }
+    router.push("/study-group");
   }
 
   function handleSubmit(e) {
@@ -401,9 +436,38 @@ export default function SessionPage({ params }) {
         </form>
       )}
 
-      {isInteractive && isQuizPhase && !activeQuizQuestionId && !sending && (
-        <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-500 text-center">
-          Waiting for the next question…
+      {/* Dead-state recovery banner. Fires when:
+          (a) backend returned 503 quiz_question_generation_failed, OR
+          (b) we're in a quiz phase with no renderable quiz question and
+              no in-flight request (orphaned pre-fix session, or future
+              new failure mode).
+          Either way, the user needs an explicit way out of a frozen UI. */}
+      {isInteractive && (generationError || (isQuizPhase && !activeQuizQuestionId && !sending)) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <p className="text-sm font-semibold text-amber-900 mb-1">
+            {generationError ? "The quizmaster is having trouble" : "Waiting for the next question…"}
+          </p>
+          <p className="text-xs text-amber-800 mb-3">
+            {generationError?.message
+              || "If this doesn't resolve in a few seconds, retry or exit — your progress so far is saved."}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={retryLastMessage}
+              disabled={sending || !lastUserContent}
+              className="bg-[#1a56db] text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-[#1648b8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {sending ? "Retrying…" : "Retry"}
+            </button>
+            <button
+              type="button"
+              onClick={exitSession}
+              className="border border-slate-300 text-slate-700 font-bold text-xs px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Exit session
+            </button>
+          </div>
         </div>
       )}
 
